@@ -3,10 +3,9 @@ name: 30 License Compliance
 on:
   workflow_dispatch:
   workflow_call:
-
+ # Using https://github.com/pivotal/LicenseFinder
 jobs:
   license-finder:
-  # Using https://github.com/pivotal/LicenseFinder
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout Repository'
@@ -18,8 +17,10 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
             ${{ runner.os }}-maven-
-      - name: 'License Finder fix with mvnw'
-        run: rm mvnw
+      - name: Run Maven Clean
+        run: mvn clean
+      - name: Install Maven Dependencies
+        run: mvn install
       - name: 'License Finder'
         uses: jmservera/license-finder-action@v0.1.4-alpha
         with:
