@@ -18,6 +18,8 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
     # References a reusable workflow for building the application
     uses: ./.github/workflows/build.yml
     # Inherit repository-level secrets to access them in the build process
@@ -32,6 +34,8 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
     # References a reusable workflow for SCA to check for vulnerable dependencies
     uses: ./.github/workflows/sca.yml
     secrets: inherit
@@ -44,6 +48,8 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
     name: Static Application Security Testing (SAST)
     # References a reusable workflow for SAST to identify code vulnerabilities
     uses: ./.github/workflows/sast.yml
@@ -58,6 +64,8 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
     # References a reusable workflow to ensure all dependencies are license-compliant
     uses: ./.github/workflows/license-compliance.yml
     secrets: inherit
