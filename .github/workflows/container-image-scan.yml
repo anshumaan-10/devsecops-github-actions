@@ -56,6 +56,8 @@ jobs:
       # Run Docker Scout Scan
       - name: Docker Scout Scan
         uses: docker/scout-action@v1.0.9
+        env:
+          DOCKER_SCOUT_CACHE_FORMAT: tar  # Specify cache format as tar
         with:
           image: ${{ env.IMAGE_TAG }}
           command: quickview,cves
