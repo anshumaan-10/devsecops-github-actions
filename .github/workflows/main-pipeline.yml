@@ -2,11 +2,12 @@ name: 00 - Main CI/CD Pipeline
 
 # This workflow triggers on every push except for markdown or text files. It can also be manually triggered.
 on:
-  push:
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.txt'
   workflow_dispatch:
+  # #push:
+  #   paths-ignore:
+  #     - '**/*.md'
+  #     - '**/*.txt'
+  
 
 jobs:
   # 1. Build Job
