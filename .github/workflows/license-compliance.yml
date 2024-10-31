@@ -21,7 +21,7 @@ jobs:
       - name: 'License Finder fix with mvnw'
         run: rm mvnw
       - name: 'License Finder'
-        uses: jmservera/license-finder-action@main
+        uses: jmservera/license-finder-action@v0.1.4-alpha
         with:
           permitted-licenses: MIT,Apache-2.0,BSD,EPL1
           approved-dependencies: |
