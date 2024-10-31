@@ -46,7 +46,7 @@ jobs:
         uses: zaproxy/action-full-scan@v0.11.0  # Ensure this image is correct and accessible
         with:
           docker_name: 'owasp/zap2docker-stable'
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           target: 'http://localhost:8080'
           cmd_options: '-a -j -l WARN -z "-addoninstallall" '
           allow_issue_writing: true
