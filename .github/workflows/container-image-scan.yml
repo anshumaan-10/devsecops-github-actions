@@ -59,7 +59,6 @@ jobs:
           fail-build: false
           only-fixed: true
           by-cve: true
-          severity-cutoff: critical
           grype-options: --vulnerability-deduplication --only-fixed
       
       - name: Upload Anchore scan SARIF report
