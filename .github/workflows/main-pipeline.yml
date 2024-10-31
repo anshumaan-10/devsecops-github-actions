@@ -81,6 +81,7 @@ jobs:
       issues: read
       actions: read  # Allow actions read permission
       security-events: write  # Allow security events write permission
+      packages: write
     # References a reusable workflow to build and tag the Docker image
     uses: ./.github/workflows/docker.yml
     secrets: inherit
@@ -95,6 +96,7 @@ jobs:
       issues: read
       actions: read  # Allow actions read permission
       security-events: write  # Allow security events write permission
+      packages: write
     name: Container Image Security Scan
     # References a reusable workflow to scan the Docker image for vulnerabilities
     uses: ./.github/workflows/container-image-scan.yml
@@ -112,6 +114,7 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
+      packages: write
       actions: read  # Allow actions read permission
       security-events: write  # Allow security events write permission
     # References a reusable workflow to perform DAST scan on the running container
