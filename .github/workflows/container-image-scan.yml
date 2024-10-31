@@ -24,6 +24,7 @@ jobs:
     name: Container Image Scan
     runs-on: ubuntu-latest
     steps:
+      # Log in to the Container registry
       - name: Log in to the Container registry
         uses: docker/login-action@v2.1.0
         with:
@@ -31,13 +32,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Pull Docker Image
       - name: Pull Docker Image
         run: docker pull ${{ env.IMAGE_TAG }}
 
+      # Commented Out Steps for Alternative Scanning Tools
+      # Uncomment if you want to use Trivy for scanning
       # - name: Scan Docker Image
       #   uses: aquasecurity/trivy-action@0.20.0
       #   with:
-      #     image-ref: ${{ env.IMAGE_TAG }}  # Use the input image tag dynamically
+      #     image-ref: ${{ env.IMAGE_TAG }}
       #     format: sarif
       #     output: trivy-results.sarif
       #     exit-code: '0'
@@ -51,21 +55,45 @@ jobs:
       #   with:
       #     sarif_file: trivy-results.sarif
 
-      - name: Run the Anchore Grype Scan Action
-        id: anchore-scan
-        uses: anchore/scan-action@v3
+      # Run the Anchore Grype Scan Action
+      # Ensure the options used are valid as per documentation
+      # - name: Run the Anchore Grype Scan Action
+      #   id: anchore-scan
+      #   uses: anchore/scan-action@v3
+      #   with:
+      #     image: ${{ env.IMAGE_TAG }}
+      #     fail-build: false
+
+      # Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          image: ${{ env.IMAGE_TAG }}
-          fail-build: false
-          # only-fixed: true
-          # by-cve: true
-          
-          # Remove unsupported options; use valid inputs as per documentation
-          # output-format: 'sarif'  # Specify the output format if necessary
-          # severity-cutoff: 'low'  # Set your severity cutoff
-          
-      - name: Upload Anchore Scan SARIF Report
-        if: steps.anchore-scan.outputs.sarif-file  # Ensure the output file exists
-        uses: github/codeql-action/upload-sarif@v3
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Run Docker Scout Scan
+      - name: Docker Scout Scan
+        uses: docker/scout-action@v1.0.9
         with:
-          sarif_file: ${{ steps.anchore-scan.outputs.sarif-file }}  # Use the correct output variable from the scan
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          command: quickview,cves
+          only-severities: critical,high
+          sarif-file: scout-report.sarif
+  
+      # Upload Artifact
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: docker-scout-findings
+          path: scout-report.sarif
+
+      # Intros Reset Part
+      # The following section resets any configurations or states necessary 
+      # to ensure that the environment is clean for the next run.
+      # Uncomment and customize according to your needs.
+      # - name: Reset Intros
+      #   run: |
+      #     echo "Resetting intros or configurations..."
+      #     # Add your reset commands here
