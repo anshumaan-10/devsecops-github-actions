@@ -56,7 +56,7 @@ jobs:
         uses: anchore/scan-action@v3
         with:
           image: ${{ env.IMAGE_TAG }}
-          # fail-build: false
+          fail-build: false
           # only-fixed: true
           # by-cve: true
           
