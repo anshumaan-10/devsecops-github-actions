@@ -15,7 +15,7 @@ jobs:
     defaults:
       run:
         shell: bash
-    name: SCA Java project
+    name: SCA Synk Scan
 
     steps:
       - name: Checkout action
@@ -35,24 +35,49 @@ jobs:
           github_pat: ${{ secrets.PAT_TOKEN }}
           crda: "latest"
 
-      - name: SCA (CRDA) Scan
-        id: crda_scan
-        uses: redhat-actions/crda@v1.2
+      # - name: SCA (CRDA) Scan
+      #   id: crda_scan
+      #   uses: redhat-actions/crda@v1.2
+      #   with:
+      #     manifest_file: ${{ matrix.manifest_file }}
+      #     snyk_token: ${{ secrets.OUR_SNYK_KEY }}
+      #     fail_on: never
+
+      # - name: Print JSON analysis report
+      #   if: ${{ always() && steps.crda_scan.outputs.crda_report_json }}
+      #   run: cat ${{ steps.crda_scan.outputs.crda_report_json }}
+
+      # - name: Print SARIF analysis report
+      #   if: ${{ always() && steps.crda_scan.outputs.crda_report_sarif }}
+      #   run: cat ${{ steps.crda_scan.outputs.crda_report_sarif }}
+
+      # - name: Print Report Link
+      #   run: echo ${{ steps.crda_scan.outputs.report_link }}
+
+      # - name: Print Artifact Name
+      #   run: echo ${{ steps.crda_scan.outputs.artifact_name }}
+  dependency-check:
+    name: Dependency-Check
+    needs: sca
+    runs-on: ubuntu-latest
+
+    steps: 
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Download OWASP Dependency Check
+        run: |
+          VERSION=$(curl -s https://jeremylong.github.io/DependencyCheck/current.txt)
+          curl -sL "https://github.com/jeremylong/DependencyCheck/releases/download/v$VERSION/dependency-check-$VERSION-release.zip" --output dependency-check.zip
+          unzip dependency-check.zip
+
+      - name: Run Dependency Check
+        run: |
+          ./dependency-check/bin/dependency-check.sh --out report.html --scan .
+          rm -rf dependency-check*
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
         with:
-          manifest_file: ${{ matrix.manifest_file }}
-          snyk_token: ${{ secrets.OUR_SNYK_KEY }}
-          fail_on: never
-
-      - name: Print JSON analysis report
-        if: ${{ always() && steps.crda_scan.outputs.crda_report_json }}
-        run: cat ${{ steps.crda_scan.outputs.crda_report_json }}
-
-      - name: Print SARIF analysis report
-        if: ${{ always() && steps.crda_scan.outputs.crda_report_sarif }}
-        run: cat ${{ steps.crda_scan.outputs.crda_report_sarif }}
-
-      - name: Print Report Link
-        run: echo ${{ steps.crda_scan.outputs.report_link }}
-
-      - name: Print Artifact Name
-        run: echo ${{ steps.crda_scan.outputs.artifact_name }}
+          name: artifacts
+          path: report.html
