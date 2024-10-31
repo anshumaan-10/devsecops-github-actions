@@ -23,13 +23,18 @@ jobs:
     # Inherit repository-level secrets to access them in the build process
     secrets: inherit  # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idsecretsinherit
 
-  # # 2. Software Composition Analysis (SCA)
-  # sca:
-  #   needs: build  # Depends on successful build job completion
-  #   name: Software Composition Analysis (SCA)
-  #   # References a reusable workflow for SCA to check for vulnerable dependencies
-  #   uses: ./.github/workflows/sca.yml
-  #   secrets: inherit
+  # 2. Software Composition Analysis (SCA)
+  sca:
+    needs: build  # Depends on successful build job completion
+    name: Software Composition Analysis (SCA)
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
+    # References a reusable workflow for SCA to check for vulnerable dependencies
+    uses: ./.github/workflows/sca.yml
+    secrets: inherit
 
   # # 3. Static Application Security Testing (SAST)
   # sast:
