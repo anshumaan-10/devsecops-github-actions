@@ -5,14 +5,14 @@ on:
     inputs:
       image-tag:
         type: string
-        description: 'The name of the docker image to scan'
+        description: 'The name of the Docker image to scan'
         required: true
 
   workflow_call:
     inputs:
       image-tag:
         type: string
-        description: 'The name of the docker image to scan'
+        description: 'The name of the Docker image to scan'
         required: true
 
 env:
@@ -27,37 +27,40 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Log in to the Container registry
+      - name: Log in to the Container Registry
         uses: docker/login-action@v2.1.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.PAT_TOKEN }}
 
-      - run: docker rm demoApp | true && docker run -d -p 8080:8080 --name demoApp ${{ env.IMAGE_TAG }}         
+      - name: Remove and Run Docker Container
+        run: |
+          docker rm demoApp || true
+          docker run -d -p 8080:8080 --name demoApp ${{ env.IMAGE_TAG }}
 
-      - name: wait for container to start
+      - name: Wait for Container to Start
         run: timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8080)" != "200" ]]; do sleep 5; done' || false
 
-      - name: test container
+      - name: Test Container
         run: curl -s localhost:8080/echo?msg=Hello%20World!
 
-      - name: Run ZAP OWASP full scan
-        uses: zaproxy/action-full-scan@v0.11.0  # Ensure this image is correct and accessible
+      - name: Run ZAP OWASP Full Scan
+        uses: zaproxy/action-full-scan@v0.11.0
         with:
-          docker_name: 'owasp/zap2docker-stable'
+          docker_name: 'ghcr.io/zaproxy/zaproxy:stable'  # Ensure this image is correct and accessible
           token: ${{ secrets.PAT_TOKEN }}
           target: 'http://localhost:8080'
           cmd_options: '-a -j -l WARN -z "-addoninstallall" '
           allow_issue_writing: true
 
-      - name: Upload HTML report
+      - name: Upload HTML Report
         uses: actions/upload-artifact@v3
         with:
           name: DAST_Report.html
           path: report_html.html
 
-      - name: Stop Docker container
+      - name: Stop Docker Container
         if: always()
         run: |
           docker stop demoApp || true
