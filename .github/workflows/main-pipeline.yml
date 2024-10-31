@@ -36,21 +36,31 @@ jobs:
     uses: ./.github/workflows/sca.yml
     secrets: inherit
 
-  # # 3. Static Application Security Testing (SAST)
-  # sast:
-  #   needs: build  # Depends on successful build job completion
-  #   name: Static Application Security Testing (SAST)
-  #   # References a reusable workflow for SAST to identify code vulnerabilities
-  #   uses: ./.github/workflows/sast.yml
-  #   secrets: inherit
+  # 3. Static Application Security Testing (SAST)
+  sast:
+    needs: build  # Depends on successful build job completion
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
+    name: Static Application Security Testing (SAST)
+    # References a reusable workflow for SAST to identify code vulnerabilities
+    uses: ./.github/workflows/sast.yml
+    secrets: inherit
 
-  # # 4. License Compliance Check
-  # license-compliance:
-  #   needs: build  # Depends on successful build job completion
-  #   name: License Compliance Check
-  #   # References a reusable workflow to ensure all dependencies are license-compliant
-  #   uses: ./.github/workflows/license-compliance.yml
-  #   secrets: inherit
+  # 4. License Compliance Check
+  license-compliance:
+    needs: build  # Depends on successful build job completion
+    name: License Compliance Check
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
+    # References a reusable workflow to ensure all dependencies are license-compliant
+    uses: ./.github/workflows/license-compliance.yml
+    secrets: inherit
 
   # # 5. Docker Image Build
   # docker:
