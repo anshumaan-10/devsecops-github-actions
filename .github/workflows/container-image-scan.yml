@@ -40,9 +40,6 @@ jobs:
           image-ref: ${{ env.IMAGE_TAG }}  # Use the input image tag dynamically
           format: sarif
           output: trivy-results.sarif
-          ignore-unfixed: false
-          vuln-type: os,library
-          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
 
       - name: Upload Trivy scan results to GitHub Security tab
         if: always()
