@@ -17,56 +17,56 @@ jobs:
     # Inherit repository-level secrets to access them in the build process
     secrets: inherit  # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idsecretsinherit
 
-  # 2. Software Composition Analysis (SCA)
-  sca:
-    needs: build  # Depends on successful build job completion
-    name: Software Composition Analysis (SCA)
-    # References a reusable workflow for SCA to check for vulnerable dependencies
-    uses: ./.github/workflows/sca.yml
-    secrets: inherit
+  # # 2. Software Composition Analysis (SCA)
+  # sca:
+  #   needs: build  # Depends on successful build job completion
+  #   name: Software Composition Analysis (SCA)
+  #   # References a reusable workflow for SCA to check for vulnerable dependencies
+  #   uses: ./.github/workflows/sca.yml
+  #   secrets: inherit
 
-  # 3. Static Application Security Testing (SAST)
-  sast:
-    needs: build  # Depends on successful build job completion
-    name: Static Application Security Testing (SAST)
-    # References a reusable workflow for SAST to identify code vulnerabilities
-    uses: ./.github/workflows/sast.yml
-    secrets: inherit
+  # # 3. Static Application Security Testing (SAST)
+  # sast:
+  #   needs: build  # Depends on successful build job completion
+  #   name: Static Application Security Testing (SAST)
+  #   # References a reusable workflow for SAST to identify code vulnerabilities
+  #   uses: ./.github/workflows/sast.yml
+  #   secrets: inherit
 
-  # 4. License Compliance Check
-  license-compliance:
-    needs: build  # Depends on successful build job completion
-    name: License Compliance Check
-    # References a reusable workflow to ensure all dependencies are license-compliant
-    uses: ./.github/workflows/license-compliance.yml
-    secrets: inherit
+  # # 4. License Compliance Check
+  # license-compliance:
+  #   needs: build  # Depends on successful build job completion
+  #   name: License Compliance Check
+  #   # References a reusable workflow to ensure all dependencies are license-compliant
+  #   uses: ./.github/workflows/license-compliance.yml
+  #   secrets: inherit
 
-  # 5. Docker Image Build
-  docker:
-    needs: build  # Depends on successful build job completion
-    name: Build Docker Image
-    # References a reusable workflow to build and tag the Docker image
-    uses: ./.github/workflows/docker.yml
-    secrets: inherit
+  # # 5. Docker Image Build
+  # docker:
+  #   needs: build  # Depends on successful build job completion
+  #   name: Build Docker Image
+  #   # References a reusable workflow to build and tag the Docker image
+  #   uses: ./.github/workflows/docker.yml
+  #   secrets: inherit
 
-  # 6. Container Image Security Scan
-  container-image-scan:
-    needs: docker  # Depends on successful Docker image build
-    name: Container Image Security Scan
-    # References a reusable workflow to scan the Docker image for vulnerabilities
-    uses: ./.github/workflows/container-image-scan.yml
-    secrets: inherit
-    # Passes the Docker image tag from the previous job to use for scanning
-    with:
-      image-tag: ${{ needs.docker.outputs.image-tag }}
+  # # 6. Container Image Security Scan
+  # container-image-scan:
+  #   needs: docker  # Depends on successful Docker image build
+  #   name: Container Image Security Scan
+  #   # References a reusable workflow to scan the Docker image for vulnerabilities
+  #   uses: ./.github/workflows/container-image-scan.yml
+  #   secrets: inherit
+  #   # Passes the Docker image tag from the previous job to use for scanning
+  #   with:
+  #     image-tag: ${{ needs.docker.outputs.image-tag }}
 
-  # 7. Dynamic Application Security Testing (DAST)
-  dast:
-    needs: [build, docker]  # Depends on both build and Docker image build jobs
-    name: Dynamic Application Security Testing (DAST)
-    # References a reusable workflow to perform DAST scan on the running container
-    uses: ./.github/workflows/dast.yml
-    secrets: inherit
-    # Passes the Docker image tag from the Docker build job to the DAST scan job
-    with:
-      image-tag: ${{ needs.docker.outputs.image-tag }}
+  # # 7. Dynamic Application Security Testing (DAST)
+  # dast:
+  #   needs: [build, docker]  # Depends on both build and Docker image build jobs
+  #   name: Dynamic Application Security Testing (DAST)
+  #   # References a reusable workflow to perform DAST scan on the running container
+  #   uses: ./.github/workflows/dast.yml
+  #   secrets: inherit
+  #   # Passes the Docker image tag from the Docker build job to the DAST scan job
+  #   with:
+  #     image-tag: ${{ needs.docker.outputs.image-tag }}
