@@ -31,20 +31,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - run: docker pull ${{ env.IMAGE_TAG }}
+      - name: Pull Docker Image
+        run: docker pull ${{ env.IMAGE_TAG }}
 
       - name: Scan Docker Image
         uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: 'ghcr.io/anshumaan-10/devsecops-github-actions:main'
-          format: 'sarif'
-          output: 'trivy-results.sarif'
+          image-ref: ${{ env.IMAGE_TAG }}  # Use the input image tag dynamically
+          format: sarif
+          output: trivy-results.sarif
           ignore-unfixed: false
-          vuln-type: 'os,library'
-          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
-          
+          vuln-type: os,library
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+
       - name: Upload Trivy scan results to GitHub Security tab
         if: always()
         uses: github/codeql-action/upload-sarif@v3
         with:
-            sarif_file: 'trivy-results.sarif'
+          sarif_file: trivy-results.sarif
