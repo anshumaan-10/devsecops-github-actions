@@ -56,12 +56,13 @@ jobs:
         uses: anchore/scan-action@v3
         with:
           image: ${{ env.IMAGE_TAG }}
-          fail-build: false
-          only-fixed: true
-          by-cve: true
+          # fail-build: false
+          # only-fixed: true
+          # by-cve: true
+          
           # Remove unsupported options; use valid inputs as per documentation
-          output-format: 'sarif'  # Specify the output format if necessary
-          severity-cutoff: 'low'  # Set your severity cutoff
+          # output-format: 'sarif'  # Specify the output format if necessary
+          # severity-cutoff: 'low'  # Set your severity cutoff
           
       - name: Upload Anchore Scan SARIF Report
         if: steps.anchore-scan.outputs.sarif-file  # Ensure the output file exists
