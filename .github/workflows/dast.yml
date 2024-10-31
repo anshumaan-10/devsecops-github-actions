@@ -43,9 +43,9 @@ jobs:
         run: curl -s localhost:8080/echo?msg=Hello%20World!
 
       - name: Run ZAP OWASP full scan
-        uses: zaproxy/action-full-scan@v0.11.0
+        uses: zaproxy/action-full-scan@v0.11.0  # Ensure this image is correct and accessible
         with:
-          docker_name: 'owasp/zap2docker-stable'  # Ensure this image is correct and accessible
+          docker_name: 'owasp/zap2docker-stable'
           token: ${{ secrets.GITHUB_TOKEN }}
           target: 'http://localhost:8080'
           cmd_options: '-a -j -l WARN -z "-addoninstallall" '
