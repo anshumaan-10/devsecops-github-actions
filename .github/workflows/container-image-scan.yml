@@ -34,19 +34,35 @@ jobs:
       - name: Pull Docker Image
         run: docker pull ${{ env.IMAGE_TAG }}
 
-      - name: Scan Docker Image
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-          image-ref: ${{ env.IMAGE_TAG }}  # Use the input image tag dynamically
-          format: sarif
-          output: trivy-results.sarif
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
+      # - name: Scan Docker Image
+      #   uses: aquasecurity/trivy-action@0.20.0
+      #   with:
+      #     image-ref: ${{ env.IMAGE_TAG }}  # Use the input image tag dynamically
+      #     format: sarif
+      #     output: trivy-results.sarif
+      #     exit-code: '0'
+      #     ignore-unfixed: true
+      #     vuln-type: 'os,library'
+      #     severity: 'CRITICAL,HIGH'
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   if: always()
+      #   uses: github/codeql-action/upload-sarif@v3
+      #   with:
+      #     sarif_file: trivy-results.sarif
+
+      - name: Run the Anchore Grype scan action
+        id: anchore-scan
+        uses: anchore/scan-action@v3
         with:
-          sarif_file: trivy-results.sarif
+          image: ${{ env.IMAGE_TAG }}
+          fail-build: false
+          only-fixed: true
+          by-cve: true
+          severity-cutoff: critical
+          grype-options: --vulnerability-deduplication --only-fixed
+      
+      - name: Upload Anchore scan SARIF report
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: filtered_sarif.sarif
