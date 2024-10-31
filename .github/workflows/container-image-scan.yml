@@ -17,6 +17,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  IMAGE_NAME: anshumaan-10/devsecops-github-actions
   IMAGE_TAG: ${{ inputs.image-tag }}
 
 jobs:
@@ -27,14 +28,19 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
       packages: write
     runs-on: ubuntu-latest
+
     steps:
-      # Log in to the Container registry
-      - name: Log in to the Container registry
-        uses: docker/login-action@v2.1.0
+      # Checkout code (if required)
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -42,13 +48,13 @@ jobs:
 
       # Pull Docker Image
       - name: Pull Docker Image
-        run: docker pull ${{ env.IMAGE_TAG }}
+        run: docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
 
       # List Docker Images
       - name: List Docker Images
         run: docker images
-
-      # Login to Docker Hub
+            # Login to Docker Hub
+            
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -59,24 +65,22 @@ jobs:
       - name: Docker Scout Scan
         uses: docker/scout-action@v1.0.9
         with:
-          image: ${{ env.IMAGE_TAG }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
           command: quickview,cves
           only-severities: critical,high
           sarif-file: scout-report.sarif
-          dockerhub-user: ${{ secrets.DOCKERHUB_USERNAME }}  # Corrected input
-          dockerhub-password: ${{ secrets.DOCKERHUB_TOKEN }}  # Corrected input
-  
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       # Upload Artifact
-      - name: Upload Artifact
+      - name: Upload Scout Report Artifact
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: docker-scout-findings
           path: scout-report.sarif
 
-      # Intros Reset Part (if needed)
-      # Uncomment and customize according to your needs.
-      # - name: Reset Intros
-      #   run: |
-      #     echo "Resetting intros or configurations..."
-      #     # Add your reset commands here
+
+
+     
+
