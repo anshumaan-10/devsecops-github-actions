@@ -12,6 +12,12 @@ jobs:
   # 1. Build Job
   build:
     name: Build Application
+    # Required permissions to use checks and pull requests in the nested job
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
     # References a reusable workflow for building the application
     uses: ./.github/workflows/build.yml
     # Inherit repository-level secrets to access them in the build process
