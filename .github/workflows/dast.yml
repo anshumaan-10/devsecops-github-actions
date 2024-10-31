@@ -31,15 +31,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run the Docker container
-        run: |
-          docker rm demoApp || true
-          docker run -d -p 8080:5000 --name demoApp ${{ env.IMAGE_TAG }}
+      - run: docker rm demoApp | true && docker run -d -p 8080:8080 --name demoApp ${{ env.IMAGE_TAG }}         
 
-      - name: Wait for the container to start
+      - name: wait for container to start
         run: timeout 300 bash -c 'while [[ "$(curl -s -o /dev/null -w ''%{http_code}'' localhost:8080)" != "200" ]]; do sleep 5; done' || false
 
-      - name: Test the container
+      - name: test container
         run: curl -s localhost:8080/echo?msg=Hello%20World!
 
       - name: Run ZAP OWASP full scan
