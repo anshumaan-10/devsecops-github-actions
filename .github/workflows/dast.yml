@@ -32,7 +32,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          password: ${{ secrets.PAT_TOKEN }}
 
       - run: docker rm demoApp | true && docker run -d -p 8080:8080 --name demoApp ${{ env.IMAGE_TAG }}         
 
