@@ -22,6 +22,14 @@ env:
 jobs:
   container-image-scan:
     name: Container Image Scan
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
+      packages: write
     runs-on: ubuntu-latest
     steps:
       # Log in to the Container registry
