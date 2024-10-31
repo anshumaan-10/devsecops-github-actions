@@ -33,14 +33,16 @@ jobs:
 
       - run: docker pull ${{ env.IMAGE_TAG }}
 
-      - name: Run Trivy vulnerability scanner
-        id: trivy-scan
+      - name: Scan Docker Image
         uses: aquasecurity/trivy-action@0.20.0
         with:
-            image-ref: ${{ env.IMAGE_TAG }} }}
-            format: 'sarif'
-            output: 'trivy-results.sarif'
-
+          image-ref: 'ghcr.io/anshumaan-10/devsecops-github-actions:main'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          ignore-unfixed: false
+          vuln-type: 'os,library'
+          severity: 'UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL'
+          
       - name: Upload Trivy scan results to GitHub Security tab
         if: always()
         uses: github/codeql-action/upload-sarif@v3
