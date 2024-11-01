@@ -27,9 +27,9 @@ env:
 
 jobs:
   validate_branch:
-     runs-on: ubuntu-latest
-     steps:
-       - name: Check the  Branch
+    runs-on: ubuntu-latest
+    steps:
+       - name: Check the Branch
          run: |
           echo "You are using a ${{ github.ref_name }} branch with ${{ github.event_name }} as action"
           
