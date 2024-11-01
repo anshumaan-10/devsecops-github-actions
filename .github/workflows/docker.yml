@@ -2,6 +2,11 @@ name: "Build and Push Docker Image to GHCR or GAR"
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag (optional)'
+        required: false
+        default: 'latest'  # Default value for the tag if not provided
   workflow_call:
     outputs:
       image-tag:
@@ -12,8 +17,6 @@ env:
   REGISTRY_GHCR: 'ghcr.io'
   REGISTRY_GAR: 'asia-south1-docker.pkg.dev'  # Adjust to your GAR location
   IMAGE_NAME: ${{ github.repository }}
-  DEFAULT_TAG: 'latest'  # Default tag, can be overridden
-  TAG: ${{ github.event.inputs.tag || env.DEFAULT_TAG }}  # Allow manual tag input or default to 'latest'
 
 jobs:
   docker:
@@ -71,11 +74,7 @@ jobs:
       - name: Construct Image Path
         id: construct-path
         run: |
-          if [[ "${{ env.REGISTRY }}" == "${{ env.REGISTRY_GAR }}" ]]; then
-            echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
-          else
-            echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
-          fi
+          echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
 
       # Step 8: Extract Docker metadata for tags and labels
       - name: Extract Docker metadata
@@ -84,7 +83,7 @@ jobs:
         with:
           images: ${{ env.IMAGE_PATH }}
           tags: |
-            ${{ env.TAG }}  # Use the TAG environment variable
+            ${{ github.event.inputs.tag }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
