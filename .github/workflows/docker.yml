@@ -59,7 +59,7 @@ jobs:
             
             # Set IMAGE_ID
             echo "IMAGE_ID=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}/${{ github.event.repository.name }}" >> $GITHUB_ENV
-            echo "Image ID is ${GITHUB_ENV['IMAGE_ID']}"
+            echo "Image ID is ${GITHUB_ENV[IMAGE_ID]}"  # Corrected variable reference
           
           # Handle invalid branches
           else
