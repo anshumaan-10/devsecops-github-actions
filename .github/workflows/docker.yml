@@ -49,7 +49,7 @@ jobs:
             echo "IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}" >> $GITHUB_ENV
             echo "Imageid is $IMAGE_ID"
           else
-            echo "The branch is invalid. Use 'gcp-release' or 'z5-main' as your branch."
+            echo "The branch is invalid. Use 'release' or 'main' as your branch."
             env.workflow_name='Invalid'
             exit 1
           fi
@@ -71,7 +71,6 @@ jobs:
       security-events: write
 
     steps:
-      # Step 1: Checkout the repository code
       - name: Check out the code
         uses: actions/checkout@v3
 
@@ -105,11 +104,8 @@ jobs:
           ls -lart
           docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
           IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-          # Strip git ref prefix from version
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')  # Lowercase the image ID
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           echo IMAGE_ID=$IMAGE_ID >> $GITHUB_ENV
@@ -137,13 +133,10 @@ jobs:
           export GOOGLE_CLOUD_PROJECT="avian-voice-433417-d5"
           export GAR_REPO_NAME="asia-south1-docker-images-multiregion-prod"
           export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}
-        
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')  # Lowercase the image ID
+          
           docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-          # Change all uppercase to lowercase
-          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]') 
-          # Strip git ref prefix from version
           VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-          # Strip "v" prefix from tag name
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
           
           echo "VERSION=$VERSION"
@@ -190,25 +183,23 @@ jobs:
         id: trivy-scan
         uses: aquasecurity/trivy-action@0.20.0
         with:
-            image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
-            format: 'sarif'
-            output: 'trivy-results.sarif'
+          image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: false
+          exit-code: 0
+          custom-template: 'trivy-template.tpl'
+          ignorefile: '.trivyignore'
+          vulnerability-type: 'os,library'
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-            sarif_file: 'trivy-results.sarif'
-            path: trivy-results.json
-
-      - name: Push Docker Image to GHCR
-        if: needs.validate_branch.outputs.op_workflow_name == 'nonprod'
+      - name: Push Docker image to the registry
+        id: push-docker-image
         run: |
-          echo "Pushing image to GitHub Container Registry"
+          echo "Pushing image $IMAGE_ID:$TAG_VERSION to registry..."
           docker push $IMAGE_ID:$TAG_VERSION
+          echo "Image pushed successfully!"
 
-      - name: Push Docker Image to GAR
-        if: needs.validate_branch.outputs.op_workflow_name == 'prod'
+      - name: Output pushed image details
         run: |
-          echo "Pushing image to Google Artifact Registry"
-          docker push $IMAGE_ID:$TAG_VERSION
+          echo "Pushed image URL: ${{ env.IMAGE_NAME_WITH_TAG }}"
+          echo "Image TAG: $TAG_VERSION"
