@@ -86,7 +86,7 @@ jobs:
       packages: write
     # References a reusable workflow to build and tag the Docker image
     uses: ./.github/workflows/docker.yml
-    #secrets: inherit
+    secrets: inherit
 
   # 6. Container Image Security Scan
   container-image-scan:
