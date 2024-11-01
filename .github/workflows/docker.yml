@@ -30,9 +30,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check the Branch
+        id: branch_check
         run: |
           echo "You are using a ${{ github.ref_name }} branch with ${{ github.event_name }} as action"
-          
+
           # Check for valid branches
           if [[ "${{ github.ref_name }}" == "release" || "${{ github.base_ref }}" == "release" || 
                 "${{ github.ref_name }}" == feature/* || "${{ github.base_ref }}" == feature/* || 
@@ -60,7 +61,7 @@ jobs:
             
             # Set IMAGE_ID
             echo "IMAGE_ID=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}/${{ github.event.repository.name }}" >> $GITHUB_ENV
-            echo "Image ID is ${!IMAGE_ID}"
+            echo "Image ID is ${IMAGE_ID}"
 
           # Handle invalid branches
           else
