@@ -35,10 +35,10 @@ jobs:
           echo "You are using a ${{ github.ref_name }} branch with ${{ github.event_name }} as action"
 
           # Check for valid branches
-          if [[ "${{ github.ref_name }}" == "release" || "${{ github.base_ref }}" == "release" || 
-                "${{ github.ref_name }}" == feature/* || "${{ github.base_ref }}" == feature/* || 
-                "${{ github.ref_name }}" == release/* || "${{ github.base_ref }}" == release/* || 
-                "${{ github.ref_name }}" == bugfix/* || "${{ github.base_ref }}" == bugfix/* ]]; then
+          if [[ "${{ github.ref_name }}" == 'release' || "${{ github.base_ref }}" == 'release' || 
+                "${{ github.ref_name }}" == feature* || "${{ github.base_ref }}" == feature* || 
+                "${{ github.ref_name }}" == release* || "${{ github.base_ref }}" == release* || 
+                "${{ github.ref_name }}" == bugfix* || "${{ github.base_ref }}" == bugfix* ]]; then
                 
             echo "The branch follows 'release*/feature*/bugfix*' workflows."
             echo "workflow_name=nonprod" >> $GITHUB_ENV
@@ -46,8 +46,8 @@ jobs:
             echo "PAC_ACTION=continue" >> $GITHUB_ENV
           
           # Check for production branch
-          elif [[ "${{ github.ref_name }}" == "main" || "${{ github.base_ref }}" == "main" || 
-                  "${{ github.ref_name }}" == hotfix/* || "${{ github.base_ref }}" == hotfix/* ]]; then
+          elif [[ "${{ github.ref_name }}" == 'main' || "${{ github.base_ref }}" == 'main' || 
+                  "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
             echo "The branch follows 'prod' workflows."
             echo "workflow_name=prod" >> $GITHUB_ENV
             echo "REGISTRY=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}" >> $GITHUB_ENV
