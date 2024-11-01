@@ -14,37 +14,222 @@ on:
         value: ${{ jobs.docker.outputs.image-tag }}
 
 env:
-  REGISTRY_GHCR: 'ghcr.io'
-  REGISTRY_GAR: 'asia-south1-docker.pkg.dev'  # Adjust to your GAR location
+  REGISTRY: ghcr.io
+  # github.repository as <account>/<repo>
+  #https://asia-south1-docker.pkg.dev/avian-voice-433417-d5/asia-south1-docker-images-multiregion-prod
+  IMAGE_NAME:  '${{ github.event.repository.name }}'
+  IMAGE_ID: 'ghcr.io/${{ github.event.repository.name }}/temp:v01'
+  GAR_NAME: 'asia-south1-docker.pkg.dev'
+  GAR_REPO_NAME: 'asia-south1-docker-images-multiregion-prod'
+  tag: 'default'
+  TAG_VERSION: 'default'
+  workflow_name: 'gcp-invalid'
+  IMAGE_NAME_WITH_TAG: 'default:default'
+  PAC_ACTION: 'continue'
 
 jobs:
-  docker:
+  validate_branch:
+   runs-on: ubuntu-latest
+   steps:
+    - name: Check Branch
+      run: |
+        echo "You are using a  ${{ github.ref_name }} ${{ github.head_ref }}branch with ${{github.event_name}} as action"
+        if ["${{ github.ref_name }}" == 'release' ] || [ "${{ github.base_ref }}" == 'release' ] || [[ "${{ github.ref_name }}" == feature* || "${{ github.base_ref }}" == feature* ]] || [[ "${{ github.ref_name }}" == release* || "${{ github.base_ref }}" == release* ]] || [[ "${{ github.ref_name }}" == bugfix* || "${{ github.base_ref }}" == bugfix* ]]; then
+          echo "The branch follows 'release*/feature*/bugfix*' workflows."
+          echo "workflow_name=nonprod" >> $GITHUB_ENV
+          echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
+          echo "PAC_ACTION=continue" >> $GITHUB_ENV
+        
+        elif [ "${{ github.ref_name }}" == 'main' ] || [ "${{ github.base_ref }}" == 'main' ] || [[ "${{ github.ref_name }}" == hotfix* ]] || [[ "${{ github.base_ref }}" == hotfix* ]]; then
+          echo "The branch follows 'prod' workflows."
+          echo "workflow_name=prod" >> $GITHUB_ENV
+          echo "REGISTRY=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}" >> $GITHUB_ENV
+          if [[ "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
+            echo "PAC_ACTION=continue" >> $GITHUB_ENV
+          else
+          echo "PAC_ACTION=break" >> $GITHUB_ENV
+          fi
+          echo "IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}" >> $GITHUB_ENV
+          echo "Imageid is $IMAGE_ID"
+        else
+          echo "The branch is invalid. Use 'gcp-release' or 'z5-main' as your branch."
+          env.workflow_name='Invalid'
+          exit 1
+        fi
+   outputs:
+    op_workflow_name: ${{ env.workflow_name }}
+    op_registry: ${{ env.REGISTRY }}
+    op_pac_action: ${{ env.PAC_ACTION }}
+
+  build-docker-image:
     outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
+      op_image_url: ${{ steps.main-build.outputs.imageurl }}
     runs-on: ubuntu-latest
+    needs: validate_branch
     permissions:
       contents: read
+      id-token: write
       packages: write
+      actions: read
+      security-events: write
+
     steps:
       # Step 1: Checkout the repository code
       - name: Check out the code
         uses: actions/checkout@v3
-      
-      # Step 2: Download the application binary artifact (if required)
-      - name: Download application binary
-        uses: actions/download-artifact@v3.0.0
-        with:
-          name: Application-Binary
-          path: target
 
-      # Step 3: Set REGISTRY environment variable based on branch
-      - name: Set REGISTRY environment variable
+      - name: Log into GHCR registry 
+        if: needs.validate_branch.outputs.op_workflow_name == 'nonprod' && github.event_name =='push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log into Google Artifact registry 
+        if: needs.validate_branch.outputs.op_workflow_name == 'prod' &&  github.event_name =='push'
+        uses: docker/login-action@v3
+        with: 
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+            # Extract metadata (tags, labels) for Docker
+      # https://github.com/docker/metadata-action
+      - name: Extract Docker metadata
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      # Build and push Docker image with Buildx (don't push on PR) ##L82 is added  for duplicate directory
+      # https://github.com/docker/build-push-action
+      
+      - name: Build Docker image for gcp-release
+        id: release-build
+        if: needs.validate_branch.outputs.op_workflow_name == 'nonprod'
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "REGISTRY=${{ env.REGISTRY_GAR }}" >> $GITHUB_ENV
-          else
-            echo "REGISTRY=${{ env.REGISTRY_GHCR }}" >> $GITHUB_ENV
-          fi
+          echo "Build for Nonprod in Progress..."
+          pwd
+          ls -lart
+          docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          echo IMAGE_ID=$IMAGE_ID >> $GITHUB_ENV
+          echo VERSION=$VERSION >> $GITHUB_ENV
+          export tag=$VERSION-$(TZ='Asia/Calcutta' date "+%Y%m%d.%H%M")
+          echo tag=$tag >> $GITHUB_ENV
+          export TAG_VERSION=$tag
+          export IMAGE_NAME_WITH_TAG="ghcr.io/anshumaan-10/$(basename ${{ github.repository }}):${TAG_VERSION}"
+
+          docker tag $IMAGE_NAME $IMAGE_ID:$tag
+          docker images
+          echo "IMAGE_NAME_WITH_TAG=$IMAGE_NAME_WITH_TAG" >> $GITHUB_ENV
+          echo "imageurl=$IMAGE_NAME_WITH_TAG" >> $GITHUB_OUTPUT
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
+          export IMAGE_NAME="$(basename ${{github.repository}}):$TAG_VERSION"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Build Docker image for z5-main
+        id: main-build
+        if: needs.validate_branch.outputs.op_workflow_name == 'prod'
+        run: |
+          echo "Build for Prod-Prisma-scan in progress"
+          pwd
+          ls -lart
+          export GOOGLE_CLOUD_PROJECT="avian-voice-433417-d5"
+          export GAR_REPO_NAME="asia-south1-docker-images-multiregion-prod"
+          export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}
+        
+          docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]') 
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          
+          echo "VERSION=$VERSION"
+          echo "IMAGE_ID-->$IMAGE_ID"
+
+          export tag=$VERSION-$(TZ='Asia/Calcutta' date "+%Y%m%d.%H%M")
+          echo tag=$tag >> $GITHUB_ENV
+          export TAG_VERSION=$tag
+          export IMAGE_NAME_WITH_TAG="$IMAGE_ID:$TAG_VERSION"
+          
+          echo "IMAGE_NAME_WITH_TAG-->$IMAGE_NAME_WITH_TAG"
+
+          docker tag $IMAGE_NAME $IMAGE_ID:$TAG_VERSION
+          docker images
+          echo "IMAGE_NAME_WITH_TAG=$IMAGE_NAME_WITH_TAG" >> $GITHUB_ENV
+          echo "imageurl=$IMAGE_NAME_WITH_TAG" >> $GITHUB_OUTPUT
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
+          export IMAGE_NAME="${{ github.event.repository.name }}:$TAG_VERSION"
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2.5.0
+        with:
+          driver-opts: |
+            image=moby/buildkit:v0.10.6
+
+      # Login to Docker Hub
+      # https://github.com/docker/login-action
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Analyze for critical and high CVEs using docker scout
+        id: docker-scout-cves
+        uses: docker/scout-action@v1
+        with:
+          command: cves
+          image: ${{ env.IMAGE_NAME_WITH_TAG }}
+          only-severities: critical,high
+          sarif-file: sarif.output.json
+          summary: true
+      
+      - name: Upload SARIF result
+        id: upload-sarif
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: sarif.output.json
+
+      # - name: Advance Security Compliance Action for your branch
+      #   id: pac-gcp
+      #   uses: advanced-security/policy-as-code@v2.5.0
+      #   with:
+      #     severity: error
+
+      #     # Repository owner/name.
+      #     # This can be setup using a separate repository to the one being analysed
+      #     #  for security compliance
+      #     repository: ${{ github.repository }}
+
+      #     # The owner/repo of where the policy is stored
+      #     # This generally is primarily used for a single repository that defines
+      #     #  your organizations security policy
+      #     policy: org/<repo-name>
+      #     policy-path: policy/advance.yml
+      #     policy-branch: master 
+      #     token: ${{ secrets.PolicyAsCode }}
+      #     action: ${{ needs.validate_branch.outputs.op_pac_action }}
+
+      #     # [optional] Additional arguments
+      #     argvs: --display
+      #     ref: ${{ github.ref }}
+
+      - name: push Docker image to ghcr if no issues
+        if: needs.validate_branch.outputs.op_workflow_name == 'nonprod' && github.event_name =='push'
+        run: |
+          echo " Pushing the Image to ghcr"
+          docker images
+          docker push ${{ env.IMAGE_ID }}:${{ env.tag }}
 
       # Step 4: Authenticate with Google Cloud for GAR
       - name: Authenticate with Google Cloud
@@ -53,77 +238,13 @@ jobs:
         with:
           credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      # Step 5: Set up Google Cloud SDK (required for GAR push)
-      - name: Set up Google Cloud SDK
-        if: env.REGISTRY == env.REGISTRY_GAR
-        uses: google-github-actions/setup-gcloud@v2
-        with:
-          project_id: 'avian-voice-433417-d5'  # Replace with your GCP project ID
-
-      # Step 6: Authenticate Docker with Google Cloud for GAR
-      - name: Configure Docker to use Google Cloud
-        if: env.REGISTRY == env.REGISTRY_GAR
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev
-
-      # Step 7: Authenticate to GHCR if targeting GHCR
-      - name: Log in to GitHub Container Registry (GHCR)
-        if: env.REGISTRY == env.REGISTRY_GHCR
-        uses: docker/login-action@v2.1.0
-        with:
-          registry: ${{ env.REGISTRY_GHCR }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      # Step 8: Set the IMAGE_NAME variable based on the tag
-      - name: Set IMAGE_NAME
-        id: set-image-name
+      - name: push Docker image to google artifact registry if no issues
+        if: needs.validate_branch.outputs.op_workflow_name == 'prod' && github.event_name =='push'
         run: |
-          if [[ "${{ github.ref_name }}" == "main" ]]; then
-            echo "IMAGE_NAME=${{ env.REGISTRY }}/avian-voice-433417-d5/asia-south1-docker-images-multiregion-prod/${{ github.event.inputs.tag || 'latest' }}" >> $GITHUB_ENV
-          else
-            echo "IMAGE_NAME=${{ env.REGISTRY }}/${{ github.repository }}:${{ github.event.inputs.tag || 'latest' }}" >> $GITHUB_ENV
-          fi
-
-      # Step 9: Extract Docker metadata for tags and labels
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v4.1.0
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          tags: |
-            ${{ github.event.inputs.tag || 'latest' }}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=ref,event=pr
-            type=ref,event=tag
-            type=ref,event=branch
-            type=schedule,pattern=main
-
-      # Step 10: Build the Docker image
-      - name: Build Docker Image
-        id: build-image
-        run: |
-          docker build -t ${{ env.IMAGE_NAME }} .
-
-      # Step 11: Push Docker image to Google Artifact Registry (GAR)
-      - name: Push Docker Image to GAR
-        if: env.REGISTRY == env.REGISTRY_GAR
-        run: |
-          # Ensure the IMAGE_NAME is correctly formatted for GAR
-          GAR_IMAGE_NAME="${{ env.REGISTRY }}/${{ github.repository }}:${{ github.event.inputs.tag || 'latest' }}"
-          echo "Pushing image to GAR: $GAR_IMAGE_NAME"
-          docker push $GAR_IMAGE_NAME
-
-      # Step 12: Push Docker image to GitHub Container Registry (GHCR)
-      - name: Push Docker Image to GHCR
-        if: env.REGISTRY == env.REGISTRY_GHCR
-        run: |
+          echo "Authenticating to GAR..."
           gcloud auth configure-docker asia-south1-docker.pkg.dev
-          docker push ${{ env.IMAGE_NAME }}
+          echo " Pushing the Image to GAR"
+          docker push ${{ steps.main-build.outputs.imageurl }}
 
-      # Step 13: Output the image tag and path
-      - name: Output image details
-        run: |
-          echo "Image tag is: ${{ github.event.inputs.tag || 'latest' }}"
-          echo "Image path is: ${{ env.IMAGE_NAME }}"
+
+   
