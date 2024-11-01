@@ -31,27 +31,27 @@ jobs:
     steps:
       - name: Check the Branch
         run: |
-          echo "You are using a ${GITHUB_REF_NAME} branch with ${GITHUB_EVENT_NAME} as action"
+          echo "You are using a ${{ github.ref_name }} branch with ${{ github.event_name }} as action"
           
           # Check for valid branches
-          if [[ "${GITHUB_REF_NAME}" == "release" || "${GITHUB_BASE_REF}" == "release" || 
-                "${GITHUB_REF_NAME}" == feature* || "${GITHUB_BASE_REF}" == feature* || 
-                "${GITHUB_REF_NAME}" == release* || "${GITHUB_BASE_REF}" == release* || 
-                "${GITHUB_REF_NAME}" == bugfix* || "${GITHUB_BASE_REF}" == bugfix* ]]; then
+          if [[ "${{ github.ref_name }}" == "release" || "${{ github.base_ref }}" == "release" || 
+                "${{ github.ref_name }}" == feature* || "${{ github.base_ref }}" == feature* || 
+                "${{ github.ref_name }}" == release* || "${{ github.base_ref }}" == release* || 
+                "${{ github.ref_name }}" == bugfix* || "${{ github.base_ref }}" == bugfix* ]]; then
             echo "The branch follows 'release*/feature*/bugfix*' workflows."
             echo "workflow_name=nonprod" >> $GITHUB_ENV
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
             echo "PAC_ACTION=continue" >> $GITHUB_ENV
           
           # Check for production branch
-          elif [[ "${GITHUB_REF_NAME}" == "main" || "${GITHUB_BASE_REF}" == "main" || 
-                  "${GITHUB_REF_NAME}" == hotfix* || "${GITHUB_BASE_REF}" == hotfix* ]]; then
+          elif [[ "${{ github.ref_name }}" == "main" || "${{ github.base_ref }}" == "main" || 
+                  "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
             echo "The branch follows 'prod' workflows."
             echo "workflow_name=prod" >> $GITHUB_ENV
             echo "REGISTRY=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}" >> $GITHUB_ENV
             
             # Check for hotfix branches
-            if [[ "${GITHUB_REF_NAME}" == hotfix* || "${GITHUB_BASE_REF}" == hotfix* ]]; then
+            if [[ "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
               echo "PAC_ACTION=continue" >> $GITHUB_ENV
             else
               echo "PAC_ACTION=break" >> $GITHUB_ENV
@@ -59,7 +59,7 @@ jobs:
             
             # Set IMAGE_ID
             echo "IMAGE_ID=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}/${{ github.event.repository.name }}" >> $GITHUB_ENV
-            echo "Image ID is ${GITHUB_ENV[IMAGE_ID]}"  # Corrected variable reference
+            echo "Image ID is $IMAGE_ID"
           
           # Handle invalid branches
           else
@@ -68,6 +68,10 @@ jobs:
             exit 1
           fi
 
+      outputs:
+        op_workflow_name: ${{ env.workflow_name }}
+        op_registry: ${{ env.REGISTRY }}
+        op_pac_action: ${{ env.PAC_ACTION }}
 
   build-docker-image:
     outputs:
