@@ -12,6 +12,8 @@ env:
   REGISTRY_GHCR: 'ghcr.io'
   REGISTRY_GAR: 'asia-south1-docker.pkg.dev'  # Adjust to your GAR location
   IMAGE_NAME: ${{ github.repository }}
+  DEFAULT_TAG: 'latest'  # Default tag, can be overridden
+  TAG: ${{ github.event.inputs.tag || env.DEFAULT_TAG }}  # Allow manual tag input or default to 'latest'
 
 jobs:
   docker:
@@ -65,13 +67,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 7: Extract Docker metadata for tags and labels
+      # Step 7: Construct Image Path
+      - name: Construct Image Path
+        id: construct-path
+        run: |
+          if [[ "${{ env.REGISTRY }}" == "${{ env.REGISTRY_GAR }}" ]]; then
+            echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+          fi
+
+      # Step 8: Extract Docker metadata for tags and labels
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v4.1.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE_PATH }}
           tags: |
+            ${{ env.TAG }}  # Use the TAG environment variable
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -80,7 +93,7 @@ jobs:
             type=ref,event=branch
             type=schedule,pattern=main
 
-      # Step 8: Build and push the Docker image to the chosen registry
+      # Step 9: Build and push the Docker image to the chosen registry
       - name: Build and Push Docker Image
         uses: docker/build-push-action@v3.2.0
         with:
@@ -89,7 +102,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      # Step 9 (Optional): Output the image tag
+      # Step 10 (Optional): Output the image tag
       - name: Output image tag
         run: echo "Image tag is ${{ steps.meta.outputs.tags }}"
         shell: bash
