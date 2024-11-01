@@ -186,19 +186,20 @@ jobs:
           only-severities: critical,high
           registry: ghcr.io
 
-      - name: Scan the Docker image with Trivy
+      - name: Run Trivy vulnerability scanner
         id: trivy-scan
-        uses: aquasecurity/trivy-action@v0.4.0
+        uses: aquasecurity/trivy-action@0.20.0
         with:
-          image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
-          format: 'json'
-          output: 'trivy-results.json'
+            image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
+            format: 'sarif'
+            output: 'trivy-results.sarif'
 
-      - name: Upload Trivy results as artifacts
-        uses: actions/upload-artifact@v3
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
         with:
-          name: trivy-results
-          path: trivy-results.json
+            sarif_file: 'trivy-results.sarif'
+            path: trivy-results.json
 
       - name: Push Docker Image to GHCR
         if: needs.validate_branch.outputs.op_workflow_name == 'nonprod'
