@@ -1,16 +1,16 @@
-name: 50 Build docker image
+name: "Build and Push Docker Image to GHCR or GAR"
 
 on:
   workflow_dispatch:
   workflow_call:
     outputs:
       image-tag:
-        description: 'The image tag of the new docker image'
+        description: 'The image tag of the new Docker image'
         value: ${{ jobs.docker.outputs.image-tag }}
 
-    
 env:
-  REGISTRY: ghcr.io
+  REGISTRY_GHCR: 'ghcr.io'
+  REGISTRY_GAR: 'asia-south1-docker.pkg.dev'  # Adjust to your GAR location
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -22,36 +22,74 @@ jobs:
       contents: read
       packages: write
     steps:
-    - uses: actions/checkout@v3
-    - name: Download application binary
-      uses: actions/download-artifact@v3.0.0
-      with:
-        name: Application-Binary
-        path: target
-    - name: Log in to the Container registry
-      uses: docker/login-action@v2.1.0
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
-      uses: docker/metadata-action@v4.1.0
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        # make sure scheduled also uses main as tag label of the image (default is nightly which will fail in containerscanner) EVENT=BRANCH and SCHEDULE MUST BE LAST to work
-        tags: |
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=semver,pattern={{major}}
-          type=ref,event=pr
-          type=ref,event=tag
-          type=ref,event=branch
-          type=schedule,pattern=main
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v3.2.0
-      with:
-        context: .
-        push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+      # Step 1: Checkout the repository code
+      - name: Check out the code
+        uses: actions/checkout@v3
+      
+      # Step 2: Download the application binary artifact (if required)
+      - name: Download application binary
+        uses: actions/download-artifact@v3.0.0
+        with:
+          name: Application-Binary
+          path: target
+
+      # Step 3: Determine the target registry based on the branch
+      - name: Set REGISTRY environment variable
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "REGISTRY=${{ env.REGISTRY_GAR }}" >> $GITHUB_ENV
+          else
+            echo "REGISTRY=${{ env.REGISTRY_GHCR }}" >> $GITHUB_ENV
+          fi
+
+      # Step 4: Authenticate with Google Cloud for GAR
+      - name: Authenticate with Google Cloud
+        if: env.REGISTRY == env.REGISTRY_GAR
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      # Step 5: Set up Google Cloud SDK (required for GAR push)
+      - name: Set up Google Cloud SDK
+        if: env.REGISTRY == env.REGISTRY_GAR
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: 'avian-voice-433417-d5'  # Replace with your GCP project ID
+
+      # Step 6: Authenticate to GHCR if targeting GHCR
+      - name: Log in to GitHub Container Registry (GHCR)
+        if: env.REGISTRY == env.REGISTRY_GHCR
+        uses: docker/login-action@v2.1.0
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Step 7: Extract Docker metadata for tags and labels
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v4.1.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=pr
+            type=ref,event=tag
+            type=ref,event=branch
+            type=schedule,pattern=main
+
+      # Step 8: Build and push the Docker image to the chosen registry
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v3.2.0
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Step 9 (Optional): Output the image tag
+      - name: Output image tag
+        run: echo "Image tag is ${{ steps.meta.outputs.tags }}"
+        shell: bash
