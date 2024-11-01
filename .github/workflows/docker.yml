@@ -143,53 +143,53 @@ jobs:
       id: main-build
       if: needs.validate_branch.outputs.op_workflow_name == 'prod'
       run: |
-        echo "Build for Prod-Prisma-scan in progress"
-        pwd
-        ls -lart
-        export GOOGLE_CLOUD_PROJECT="avian-voice-433417-d5"
-        export GAR_REPO_NAME="asia-south1-docker-images-multiregion-prod"
-        
-        # Convert repository name to lowercase
-        REPO_NAME_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[A-Z]' '[a-z]')
-        
-        export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/$REPO_NAME_LOWER
-        
-        # Build the Docker image
-        docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
-        
-        # Change all uppercase to lowercase for IMAGE_ID
-        IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-        
-        # Strip git ref prefix from version
-        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
-        # Strip "v" prefix from tag name
-        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
-        
-        echo "VERSION=$VERSION"
-        echo "IMAGE_ID-->$IMAGE_ID"
+          echo "Build for Prod-Prisma-scan in progress"
+          pwd
+          ls -lart
+          export GOOGLE_CLOUD_PROJECT="avian-voice-433417-d5"
+          export GAR_REPO_NAME="asia-south1-docker-images-multiregion-prod"
+          
+          # Convert repository name to lowercase
+          REPO_NAME_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[A-Z]' '[a-z]')
+          
+          export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/$REPO_NAME_LOWER
+          
+          # Build the Docker image
+          docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
+          
+          # Change all uppercase to lowercase for IMAGE_ID
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+          
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+          
+          echo "VERSION=$VERSION"
+          echo "IMAGE_ID-->$IMAGE_ID"
 
-        # Create a timestamped tag
-        export tag=$VERSION-$(TZ='Asia/Calcutta' date "+%Y%m%d.%H%M")
-        echo tag=$tag >> $GITHUB_ENV
-        export TAG_VERSION=$tag
-        export IMAGE_NAME_WITH_TAG="$IMAGE_ID:$TAG_VERSION"
-        
-        echo "IMAGE_NAME_WITH_TAG-->$IMAGE_NAME_WITH_TAG"
+          # Create a timestamped tag
+          export tag=$VERSION-$(TZ='Asia/Calcutta' date "+%Y%m%d.%H%M")
+          echo tag=$tag >> $GITHUB_ENV
+          export TAG_VERSION=$tag
+          export IMAGE_NAME_WITH_TAG="$IMAGE_ID:$TAG_VERSION"
+          
+          echo "IMAGE_NAME_WITH_TAG-->$IMAGE_NAME_WITH_TAG"
 
-        # Tag the image with the correct ID and version
-        docker tag $IMAGE_NAME $IMAGE_ID:$TAG_VERSION
-        
-        # List Docker images for verification
-        docker images
-        
-        # Output necessary variables
-        echo "IMAGE_NAME_WITH_TAG=$IMAGE_NAME_WITH_TAG" >> $GITHUB_ENV
-        echo "imageurl=$IMAGE_NAME_WITH_TAG" >> $GITHUB_OUTPUT
-        echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
-        
-        # Final export of IMAGE_NAME
-        export IMAGE_NAME="$REPO_NAME_LOWER:$TAG_VERSION"  # Ensure IMAGE_NAME uses lowercase repo name
-        echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
+          # Tag the image with the correct ID and version
+          docker tag $IMAGE_NAME $IMAGE_ID:$TAG_VERSION
+          
+          # List Docker images for verification
+          docker images
+          
+          # Output necessary variables
+          echo "IMAGE_NAME_WITH_TAG=$IMAGE_NAME_WITH_TAG" >> $GITHUB_ENV
+          echo "imageurl=$IMAGE_NAME_WITH_TAG" >> $GITHUB_OUTPUT
+          echo "TAG_VERSION=$TAG_VERSION" >> $GITHUB_OUTPUT
+          
+          # Final export of IMAGE_NAME
+          export IMAGE_NAME="$REPO_NAME_LOWER:$TAG_VERSION"  # Ensure IMAGE_NAME uses lowercase repo name
+          echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
 
       - name: Setup Docker buildx
