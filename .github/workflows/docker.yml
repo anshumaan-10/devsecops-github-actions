@@ -32,6 +32,8 @@ jobs:
       - name: Check the Branch
         id: branch_check
         run: |
+          set -e  # Exit immediately if a command exits with a non-zero status
+          
           echo "You are using a ${GITHUB_REF_NAME} branch with ${GITHUB_EVENT_NAME} as action"
 
           # Check for valid branches
