@@ -2,6 +2,11 @@ name: 70 Build docker image
 
 on:
   workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Tag for the Docker image'
+        required: true
+        default: 'latest'
   workflow_call:
     outputs:
       image-tag:
