@@ -35,9 +35,10 @@ jobs:
           
           # Check for valid branches
           if [[ "${{ github.ref_name }}" == "release" || "${{ github.base_ref }}" == "release" || 
-                "${{ github.ref_name }}" == feature* || "${{ github.base_ref }}" == feature* || 
-                "${{ github.ref_name }}" == release* || "${{ github.base_ref }}" == release* || 
-                "${{ github.ref_name }}" == bugfix* || "${{ github.base_ref }}" == bugfix* ]]; then
+                "${{ github.ref_name }}" == feature/* || "${{ github.base_ref }}" == feature/* || 
+                "${{ github.ref_name }}" == release/* || "${{ github.base_ref }}" == release/* || 
+                "${{ github.ref_name }}" == bugfix/* || "${{ github.base_ref }}" == bugfix/* ]]; then
+                
             echo "The branch follows 'release*/feature*/bugfix*' workflows."
             echo "workflow_name=nonprod" >> $GITHUB_ENV
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
@@ -45,13 +46,13 @@ jobs:
           
           # Check for production branch
           elif [[ "${{ github.ref_name }}" == "main" || "${{ github.base_ref }}" == "main" || 
-                  "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
+                  "${{ github.ref_name }}" == hotfix/* || "${{ github.base_ref }}" == hotfix/* ]]; then
             echo "The branch follows 'prod' workflows."
             echo "workflow_name=prod" >> $GITHUB_ENV
             echo "REGISTRY=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}" >> $GITHUB_ENV
             
             # Check for hotfix branches
-            if [[ "${{ github.ref_name }}" == hotfix* || "${{ github.base_ref }}" == hotfix* ]]; then
+            if [[ "${{ github.ref_name }}" == hotfix/* || "${{ github.base_ref }}" == hotfix/* ]]; then
               echo "PAC_ACTION=continue" >> $GITHUB_ENV
             else
               echo "PAC_ACTION=break" >> $GITHUB_ENV
@@ -59,8 +60,8 @@ jobs:
             
             # Set IMAGE_ID
             echo "IMAGE_ID=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}/${{ github.event.repository.name }}" >> $GITHUB_ENV
-            echo "Image ID is $IMAGE_ID"
-          
+            echo "Image ID is ${!IMAGE_ID}"
+
           # Handle invalid branches
           else
             echo "The branch is invalid. Use 'release' or 'main' as your branch."
@@ -72,6 +73,7 @@ jobs:
         op_workflow_name: ${{ env.workflow_name }}
         op_registry: ${{ env.REGISTRY }}
         op_pac_action: ${{ env.PAC_ACTION }}
+
 
   build-docker-image:
     outputs:
