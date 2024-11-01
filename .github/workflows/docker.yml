@@ -83,7 +83,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log into Google Artifact registry 
-        if: needs.validate_branch.outputs.op_workflow_name == 'prod' && github.event_name =='push'
+        #if: needs.validate_branch.outputs.op_workflow_name == 'prod' && github.event_name =='push'
         uses: docker/login-action@v3
         with: 
           registry: ${{ env.REGISTRY }}
@@ -194,17 +194,35 @@ jobs:
           export IMAGE_NAME="${IMAGE_ID}:$TAG_VERSION"
           echo "IMAGE_NAME=$IMAGE_NAME" >> $GITHUB_ENV
 
-      # Scan for vulnerabilities
-      - name: Run Trivy Vulnerability Scan
-        run: |
-          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v $(pwd):/project aquasec/trivy:latest image --severity CRITICAL,HIGH --ignore-unfixed --no-progress --format json --output results.json $IMAGE_ID:${TAG_VERSION}
-        continue-on-error: true
-
-      - name: Upload Trivy scan results
-        uses: actions/upload-artifact@v2
+      - name: Analyze for critical and high CVEs using docker scout
+        id: docker-scout-cves
+        uses: docker/scout-action@v1
         with:
-          name: trivy-scan-results
-          path: results.json
+          command: cves
+          image: ${{ env.IMAGE_NAME_WITH_TAG }}
+          only-severities: critical,high
+          sarif-file: sarif.output.json
+          summary: true
+      
+      - name: Upload SARIF result
+        id: upload-sarif
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: sarif.output.json
+
+      - name: Run Trivy vulnerability scanner
+        id: trivy-scan
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+            image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
+            format: 'sarif'
+            output: 'trivy-results.sarif'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+            sarif_file: 'trivy-results.sarif'
 
       # Push the Docker image to the appropriate registry
       - name: Push Docker image to GHCR
