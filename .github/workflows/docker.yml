@@ -101,12 +101,14 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
-
-      # Compile the project
+      # compile
       - name: Build with Maven
         run: mvn clean package -B -Dmaven.test.skip
-
       - run: mkdir candidate-binary && cp target/*.jar candidate-binary
+      # test
+      - name: Test with Maven
+        run: mvn test
+      - run: mkdir test-results && cp target/*-reports/TEST-*.xml test-results
 
       # Test the project
       - name: Test with Maven
