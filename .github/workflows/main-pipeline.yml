@@ -77,6 +77,7 @@ jobs:
     name: Build Docker Image
     permissions:
       contents: read
+      id-token: write
       checks: write
       pull-requests: write
       issues: read
@@ -93,6 +94,7 @@ jobs:
     permissions:
       contents: read
       checks: write
+      id-token: write
       pull-requests: write
       issues: read
       actions: read  # Allow actions read permission
