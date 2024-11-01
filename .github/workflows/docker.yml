@@ -16,7 +16,6 @@ on:
 env:
   REGISTRY_GHCR: 'ghcr.io'
   REGISTRY_GAR: 'asia-south1-docker.pkg.dev'  # Adjust to your GAR location
-  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   docker:
@@ -38,7 +37,7 @@ jobs:
           name: Application-Binary
           path: target
 
-      # Step 3: Determine the target registry based on the branch
+      # Step 3: Set REGISTRY environment variable based on branch
       - name: Set REGISTRY environment variable
         run: |
           if [[ "${{ github.ref_name }}" == "main" ]]; then
@@ -61,7 +60,12 @@ jobs:
         with:
           project_id: 'avian-voice-433417-d5'  # Replace with your GCP project ID
 
-      # Step 6: Authenticate to GHCR if targeting GHCR
+      # Step 6: Authenticate Docker with Google Cloud for GAR
+      - name: Configure Docker to use Google Cloud
+        if: env.REGISTRY == env.REGISTRY_GAR
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev
+
+      # Step 7: Authenticate to GHCR if targeting GHCR
       - name: Log in to GitHub Container Registry (GHCR)
         if: env.REGISTRY == env.REGISTRY_GHCR
         uses: docker/login-action@v2.1.0
@@ -70,20 +74,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 7: Construct Image Path
-      - name: Construct Image Path
-        id: construct-path
+      # Step 8: Set the IMAGE_NAME variable based on the tag
+      - name: Set IMAGE_NAME
+        id: set-image-name
         run: |
-          echo "IMAGE_PATH=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_ENV
+          if [[ "${{ github.ref_name }}" == "main" ]]; then
+            echo "IMAGE_NAME=${{ env.REGISTRY }}/avian-voice-433417-d5/asia-south1-docker-images-multiregion-prod/${{ github.event.inputs.tag || 'latest' }}" >> $GITHUB_ENV
+          else
+            echo "IMAGE_NAME=${{ env.REGISTRY }}/${{ github.repository }}:${{ github.event.inputs.tag || 'latest' }}" >> $GITHUB_ENV
+          fi
 
-      # Step 8: Extract Docker metadata for tags and labels
+      # Step 9: Extract Docker metadata for tags and labels
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v4.1.0
         with:
-          images: ${{ env.IMAGE_PATH }}
+          images: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ github.event.inputs.tag }}
+            ${{ github.event.inputs.tag || 'latest' }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
@@ -92,16 +100,27 @@ jobs:
             type=ref,event=branch
             type=schedule,pattern=main
 
-      # Step 9: Build and push the Docker image to the chosen registry
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v3.2.0
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+      # Step 10: Build the Docker image
+      - name: Build Docker Image
+        id: build-image
+        run: |
+          docker build -t ${{ env.IMAGE_NAME }} .
 
-      # Step 10 (Optional): Output the image tag
-      - name: Output image tag
-        run: echo "Image tag is ${{ steps.meta.outputs.tags }}"
-        shell: bash
+      # Step 11: Push Docker image to Google Artifact Registry (GAR)
+      - name: Push Docker Image to GAR
+        if: env.REGISTRY == env.REGISTRY_GAR
+        run: |
+          docker push ${{ env.IMAGE_NAME }}
+
+      # Step 12: Push Docker image to GitHub Container Registry (GHCR)
+      - name: Push Docker Image to GHCR
+        if: env.REGISTRY == env.REGISTRY_GHCR
+        run: |
+          gcloud auth configure-docker asia-south1-docker.pkg.dev
+          docker push ${{ env.IMAGE_NAME }}
+
+      # Step 13: Output the image tag and path
+      - name: Output image details
+        run: |
+          echo "Image tag is: ${{ github.event.inputs.tag || 'latest' }}"
+          echo "Image path is: ${{ env.IMAGE_NAME }}"
