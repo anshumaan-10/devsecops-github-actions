@@ -54,10 +54,10 @@ jobs:
             env.workflow_name='Invalid'
             exit 1
           fi
-    outputs:
-      op_workflow_name: ${{ env.workflow_name }}
-      op_registry: ${{ env.REGISTRY }}
-      op_pac_action: ${{ env.PAC_ACTION }}
+      outputs:
+        op_workflow_name: ${{ env.workflow_name }}
+        op_registry: ${{ env.REGISTRY }}
+        op_pac_action: ${{ env.PAC_ACTION }}
 
   build-docker-image:
     outputs:
