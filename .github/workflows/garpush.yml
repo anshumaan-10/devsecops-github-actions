@@ -1,0 +1,49 @@
+name: 70 Build docker image
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      image-tag:
+        description: 'The image tag of the new docker image'
+        value: ${{ jobs.docker.outputs.image-tag }}
+
+env:
+  REGISTRY: asia-south1-docker.pkg.dev  # Change this to your GAR location
+  PROJECT_ID: avian-voice-433417-d5      # Your GCP project ID
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  docker:
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write  # Required for workload identity
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Authenticate with Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        workload_identity_provider: 'projects/815278883793/locations/global/workloadIdentityPools/github-wif-pool/providers/github-idp-for-wif'
+        service_account: 'sa-anshu-devsecops-cicd@avian-voice-433417-d5.iam.gserviceaccount.com'
+        project_id: 'avian-voice-433417-d5'
+        access_token_scopes: 'https://www.googleapis.com/auth/cloud-platform'
+
+    - name: Download application binary
+      uses: actions/download-artifact@v3.0.0
+      with:
+        name: Application-Binary
+        path: target
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v3.2.0
+      with:
+        context: .
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
