@@ -87,7 +87,7 @@ jobs:
             - name: Create Kritis attestation and signing
               if: needs.validate_branch.outputs.op_workflow_name == 'prod'
               run: |
-                
+                gcloud auth configure-docker asia-south1-docker.pkg.dev
                 echo  "ATTESTOR_PROJECT_ID-->${{env.ATTESTOR_PROJECT_ID}}"
                 gcloud projects describe "${{env.ATTESTOR_PROJECT_ID}}"
                 export ATTESTOR_PROJECT_NUMBER=$(gcloud projects describe "${{env.ATTESTOR_PROJECT_ID}}" --format="value(projectNumber)")
