@@ -19,34 +19,43 @@ env:
   IMAGE_ID: 'ghcr.io/${{ github.event.repository.name }}/temp:v01'
   GAR_NAME: 'asia-south1-docker.pkg.dev'
   GAR_REPO_NAME: 'asia-south1-docker-images-multiregion-prod'
+  GOOGLE_CLOUD_PROJECT: 'avian-voice-433417-d5'
   tag: 'default'
   TAG_VERSION: 'default'
   workflow_name: 'gcp-invalid'
   IMAGE_NAME_WITH_TAG: 'default:default'
   PAC_ACTION: 'continue'
 
-jobs:
-  set_registry:
-    runs-on: ubuntu-latest
-    outputs:
-      registry: ${{ steps.set_env.outputs.registry }}
-      image_id: ${{ steps.set_env.outputs.image_id }}
 
+jobs:
+  validate_branch:
+    runs-on: ubuntu-latest
     steps:
-      - name: Determine Registry
-        id: set_env
+      - name: Check Branch
         run: |
-          if [[ "${GITHUB_REF_NAME}" == "main" || "${GITHUB_REF_NAME}" == release* ]]; then
-            echo "registry=asia-south1-docker.pkg.dev/${{ secrets.GOOGLE_CLOUD_PROJECT }}/asia-south1-docker-images-multiregion-prod" >> $GITHUB_ENV
-            echo "image_id=asia-south1-docker.pkg.dev/${{ secrets.GOOGLE_CLOUD_PROJECT }}/asia-south1-docker-images-multiregion-prod/${{ github.event.repository.name | toLowerCase }}" >> $GITHUB_ENV
+          echo "You are using a  ${{ github.ref_name }} ${{ github.head_ref }}branch with ${{github.event_name}} as action"
+          if ["${{ github.ref_name }}" == 'release' ] || [ "${{ github.base_ref }}" == 'release' ]; then
+            echo "The branch follows 'gcp-release' workflows."
+            echo "workflow_name=nonprod" >> $GITHUB_ENV
+            echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
+            echo "PAC_ACTION=continue" >> $GITHUB_ENV
+          
+          elif [ "${{ github.ref_name }}" == 'main' ] || [ "${{ github.base_ref }}" == 'main']; then
+            echo "The branch follows 'prod' workflows."
+            echo "workflow_name=prod" >> $GITHUB_ENV
+            echo "REGISTRY=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}" >> $GITHUB_ENV
+            echo "PAC_ACTION=break" >> $GITHUB_ENV
+            echo "IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}" >> $GITHUB_ENV
+            echo "Imageid is $IMAGE_ID"
           else
-            echo "registry=ghcr.io" >> $GITHUB_ENV
-            echo "image_id=ghcr.io/${GITHUB_REPOSITORY}" >> $GITHUB_ENV
+            echo "The branch is invalid. Use 'gcp-release' or 'z5-main' as your branch."
+            env.workflow_name='Invalid'
+            exit 1
           fi
-        - name: Output Registry
-          run: |
-            echo "::set-output name=registry::${{ env.registry }}"
-            echo "::set-output name=image_id::${{ env.image_id }}"
+    outputs:
+      op_workflow_name: ${{ env.workflow_name }}
+      op_registry: ${{ env.REGISTRY }}
+      op_pac_action: ${{ env.PAC_ACTION }}
 
 
   build-docker-image:
