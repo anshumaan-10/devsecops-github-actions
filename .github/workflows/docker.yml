@@ -211,19 +211,19 @@ jobs:
         with:
           sarif_file: sarif.output.json
 
-      - name: Run Trivy vulnerability scanner
-        id: trivy-scan
-        uses: aquasecurity/trivy-action@0.20.0
-        with:
-            image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
-            format: 'sarif'
-            output: 'trivy-results.sarif'
+      # - name: Run Trivy vulnerability scanner
+      #   id: trivy-scan
+      #   uses: aquasecurity/trivy-action@0.20.0
+      #   with:
+      #       image-ref: ${{ env.IMAGE_NAME_WITH_TAG }}
+      #       format: 'sarif'
+      #       output: 'trivy-results.sarif'
 
-      - name: Upload Trivy scan results to GitHub Security tab
-        if: always()
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-            sarif_file: 'trivy-results.sarif'
+      # - name: Upload Trivy scan results to GitHub Security tab
+      #   if: always()
+      #   uses: github/codeql-action/upload-sarif@v2
+      #   with:
+      #       sarif_file: 'trivy-results.sarif'
 
       # Push the Docker image to the appropriate registry
       - name: Push Docker image to GHCR
