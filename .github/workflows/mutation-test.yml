@@ -5,16 +5,22 @@ on:
   push:
     branches:
       - 'main'
+
 jobs:
   mutation-test:
-    uses: actions/checkout@v3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v3
 
-    uses: stryker-mutator/github-action@v0.0.1
-      with:
-        testProject: "BusinessLogic.Test/" # required
-        breakAt: "75" # Optional
+      - name: Run Stryker Mutation Tests
+        uses: stryker-mutator/github-action@v0.0.1
+        with:
+          testProject: "BusinessLogic.Test/" # required
+          breakAt: "75" # Optional
 
-    uses: actions/upload-artifact@v3
-      with:
-        name: html-report
-        path: ${{github.workspace}}/BusinessLogic.Test/StrykerOutput/**/**/*.html
+      - name: Upload Mutation Test Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: html-report
+          path: ${{ github.workspace }}/BusinessLogic.Test/StrykerOutput/**/*.html
