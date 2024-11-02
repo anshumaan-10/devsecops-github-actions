@@ -3,11 +3,10 @@ name: 00 - Main CI/CD Pipeline
 # This workflow triggers on every push except for markdown or text files. It can also be manually triggered.
 on:
   workflow_dispatch:
-  #push:
+  # push:
   #   paths-ignore:
   #     - '**/*.md'
   #     - '**/*.txt'
-  
 
 jobs:
   # 1. Build Job
@@ -19,8 +18,8 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
     # References a reusable workflow for building the application
     uses: ./.github/workflows/build.yml
     # Inherit repository-level secrets to access them in the build process
@@ -35,12 +34,13 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
     # References a reusable workflow for SCA to check for vulnerable dependencies
     uses: ./.github/workflows/sca.yml
     secrets: inherit
 
+  # 3. Secret Scanning
   secret:
     needs: build  # Depends on successful build job completion
     name: Secret Scanning
@@ -49,27 +49,28 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
-    # References a reusable workflow for SCA to check for vulnerable dependencies
+      actions: read
+      security-events: write
+    # References a reusable workflow for Secret Scanning
     uses: ./.github/workflows/secret.yml
     secrets: inherit
-  # 3. Static Application Security Testing (SAST)
+
+  # 4. Static Application Security Testing (SAST)
   sast:
     needs: build  # Depends on successful build job completion
+    name: Static Application Security Testing (SAST)
     permissions:
       contents: read
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
-    name: Static Application Security Testing (SAST)
+      actions: read
+      security-events: write
     # References a reusable workflow for SAST to identify code vulnerabilities
     uses: ./.github/workflows/sast.yml
     secrets: inherit
 
-  # 4. License Compliance Check
+  # 5. License Compliance Check
   license-compliance:
     needs: build  # Depends on successful build job completion
     name: License Compliance Check
@@ -78,13 +79,13 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
     # References a reusable workflow to ensure all dependencies are license-compliant
     uses: ./.github/workflows/license-compliance.yml
     secrets: inherit
 
-  # 5. Docker Image Build
+  # 6. Docker Image Build
   docker:
     needs: build  # Depends on successful build job completion
     name: Build Docker Image Scan Push
@@ -94,14 +95,16 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
       packages: write
     # References a reusable workflow to build and tag the Docker image
     uses: ./.github/workflows/docker.yml
     secrets: inherit
+
+  # 7. Binary Attestation
   binary-attestation:
-    needs:   # Depends on successful build job completion
+    needs: docker  # Depends on successful Docker image build
     name: Binary Attestation Workflow
     permissions:
       contents: read
@@ -109,37 +112,35 @@ jobs:
       checks: write
       pull-requests: write
       issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
+      actions: read
+      security-events: write
       packages: write
-    # References a reusable workflow to build and tag the Docker image
+    # References a reusable workflow for binary attestation
     uses: ./.github/workflows/binary-attestation.yml
     with:
-      app_imageurl: ${{needs.docker.outputs.app_imageurl}}
+      app_imageurl: ${{ needs.docker.outputs.app_imageurl }}
     secrets: inherit
 
-
-  # # 6. Container Image Security Scan
+  # 8. Container Image Security Scan (commented out for future use)
   # container-image-scan:
   #   needs: docker  # Depends on successful Docker image build
+  #   name: Container Image Security Scan
   #   permissions:
   #     contents: read
   #     checks: write
   #     id-token: write
   #     pull-requests: write
   #     issues: read
-  #     actions: read  # Allow actions read permission
-  #     security-events: write  # Allow security events write permission
+  #     actions: read
+  #     security-events: write
   #     packages: write
-  #   name: Container Image Security Scan
   #   # References a reusable workflow to scan the Docker image for vulnerabilities
   #   uses: ./.github/workflows/container-image-scan.yml
   #   secrets: inherit
-  #   # Passes the Docker image tag from the previous job to use for scanning
   #   with:
   #     image-tag: ${{ needs.docker.outputs.image-tag }}
 
-  # # 7. Dynamic Application Security Testing (DAST)
+  # 9. Dynamic Application Security Testing (DAST) (commented out for future use)
   # dast:
   #   needs: [build, docker]  # Depends on both build and Docker image build jobs
   #   name: Dynamic Application Security Testing (DAST)
@@ -149,11 +150,10 @@ jobs:
   #     pull-requests: write
   #     issues: read
   #     packages: write
-  #     actions: read  # Allow actions read permission
-  #     security-events: write  # Allow security events write permission
+  #     actions: read
+  #     security-events: write
   #   # References a reusable workflow to perform DAST scan on the running container
   #   uses: ./.github/workflows/dast.yml
   #   secrets: inherit
-  #   # Passes the Docker image tag from the Docker build job to the DAST scan job
   #   with:
   #     image-tag: ${{ needs.docker.outputs.image-tag }}
