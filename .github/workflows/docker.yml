@@ -148,9 +148,9 @@ jobs:
           export GAR_REPO_NAME="asia-south1-docker-images-multiregion-prod"
           
           # Convert repository name to lowercase
-          REPO_NAME_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[A-Z]' '[a-z']')
+          #REPO_NAME_LOWER=$(echo "${{ github.event.repository.name }}" | tr '[A-Z]' '[a-z]')
           
-          export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/$REPO_NAME_LOWER
+          export IMAGE_ID=${GAR_NAME}/${GOOGLE_CLOUD_PROJECT}/${GAR_REPO_NAME}/${{ github.event.repository.name }}
           
           # Build the Docker image
           docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
