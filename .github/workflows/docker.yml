@@ -244,8 +244,9 @@ jobs:
 
       - name: Push Docker image to GAR
         run: |
-          echo "Pushing image to GAR..."
+          echo "Authenticating to GAR..."
           gcloud auth configure-docker asia-south1-docker.pkg.dev
-          docker push $IMAGE_ID:${TAG_VERSION}
+          echo "Pushing image to GAR..."
+          docker push ${{ steps.main-build.outputs.imageurl }}
 
 
