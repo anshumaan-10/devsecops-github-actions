@@ -11,7 +11,7 @@ on:
     outputs:
       app_imageurl:
         description: 'The image tag of the new Docker image'
-        value: ${{ jobs.build-docker-image.outputs.image-tag }}
+        value: ${{ jobs.build-docker-image.outputs.op_image_url} }}
 
 env:
   REGISTRY: ghcr.io
@@ -60,7 +60,7 @@ jobs:
 
   build-docker-image:
     outputs:
-      image-tag: ${{ steps.main-build.outputs.image-tag }}
+      op_image_url: ${{ steps.main-build.outputs.imageurl }}
     runs-on: ubuntu-latest
     needs: validate_branch
     permissions:
