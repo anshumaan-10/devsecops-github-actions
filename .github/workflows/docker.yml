@@ -9,7 +9,7 @@ on:
   #       default: 'latest'  # Default value for the tag if not provided
   workflow_call:
     outputs:
-      image-tag:
+      app_imageurl:
         description: 'The image tag of the new Docker image'
         value: ${{ jobs.build-docker-image.outputs.image-tag }}
 
