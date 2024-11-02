@@ -38,29 +38,32 @@ jobs:
       steps:
        - name: Check Branch
          run: |
-           echo "You are using a  ${{ github.ref_name }} ${{ github.head_ref }}branch with ${{github.event_name}} as action"
-           if [ "${{ github.ref_name }}" == 'release' ] || [ "${{ github.base_ref }}" == 'release'  ]; then
+           echo "You are using a ${{ github.ref_name }} branch with ${{ github.event_name }} as action"
+           if [ "${{ github.ref_name }}" == 'release' ] || [ "${{ github.base_ref }}" == 'release' ]; then
              echo "The branch follows 'gcp-release' workflows."
-             echo "You are Signining docker image build on ${{ github.ref_name }} branch"
+             echo "You are signing docker image build on ${{ github.ref_name }} branch"
              echo "workflow_name=nonprod" >> $GITHUB_ENV
              echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
              exit 0
-           elif [ "${{ github.ref_name }}" == 'main' ] || [ "${{ github.base_ref }}" == 'main' ] ; then
+           elif [ "${{ github.ref_name }}" == 'main' ] || [ "${{ github.base_ref }}" == 'main' ]; then
              echo "The branch follows 'prod' workflows."
-             echo "You are Signining docker image build on ${{ github.ref_name }} branch"
+             echo "You are signing docker image build on ${{ github.ref_name }} branch"
              echo "workflow_name=prod" >> $GITHUB_ENV
-             echo "REGISTRY=${{env.GAR_NAME}}/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}" >> $GITHUB_ENV
-             echo "DEPLOY_IMAGE is ${{env.DEPLOY_IMAGE}}"
+             
+             # Correctly format DEPLOY_IMAGE for the main branch
+             echo "DEPLOY_IMAGE=${{env.GAR_NAME}}/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}/${{ github.event.repository.name }}:${{ github.ref_name }}-$(date +'%Y%m%d.%H%M')" >> $GITHUB_ENV
+             
+             echo "DEPLOY_IMAGE is ${{ env.DEPLOY_IMAGE }}"
            else
-           echo "The branch is invalid. Use 'gcp-release' or 'z5-main' as your branch."
-           echo "Signing of docker image will not be performed on '${{ github.ref_name }} ${{ github.base_ref }}' branch... Hence Exiting the Signing workflow..."
-           env.workflow_name='Invalid'
-           exit 0
+             echo "The branch is invalid. Use 'release' or 'main' as your branch."
+             echo "Signing of docker image will not be performed on '${{ github.ref_name }} ${{ github.base_ref }}' branch... Hence Exiting the Signing workflow..."
+             echo "workflow_name=Invalid" >> $GITHUB_ENV
+             exit 0
            fi
-
       outputs:
            op_workflow_name: ${{ env.workflow_name }}
            op_registry: ${{ env.REGISTRY }}
+
     attestation:
         name: Sign and Create attestation
         needs: validate_branch
@@ -94,7 +97,7 @@ jobs:
                 export ATTESTOR_SERVICE_ACCOUNT="service-${ATTESTOR_PROJECT_NUMBER}@gcp-sa-binaryauthorization.iam.gserviceaccount.com"
                 echo "Attestor serviceaccount-->$ATTESTOR_SERVICE_ACCOUNT"
   
-                
+                echo "Repository Name: ${github.event.repository.name}"
                 # Set the GAR path you will use to host the container image
                 export CONTAINER_PATH=asia-south1-docker.pkg.dev/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}/${{ github.event.repository.name }}
 
