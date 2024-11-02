@@ -232,11 +232,20 @@ jobs:
           echo "Pushing image to GHCR..."
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} --username ${{ github.actor }} --password-stdin
           docker push $IMAGE_ID:${TAG_VERSION}
+      
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+      
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+      
 
       - name: Push Docker image to GAR
-        if: needs.validate_branch.outputs.op_workflow_name == 'prod' && github.event_name == 'push'
         run: |
           echo "Pushing image to GAR..."
+          gcloud auth configure-docker asia-south1-docker.pkg.dev
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ${{ env.REGISTRY }} --username _json_key --password-stdin
           docker push $IMAGE_ID:${TAG_VERSION}
 
