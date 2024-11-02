@@ -241,6 +241,30 @@ jobs:
       
       - name: 'Set up Cloud SDK'
         uses: 'google-github-actions/setup-gcloud@v2'
+
+      - name: Advance Security Compliance Action for your branch
+        id: pac-gcp
+        uses: advanced-security/policy-as-code@v2.9.0
+        with:
+          severity: error
+
+          # Repository owner/name.
+          # This can be setup using a separate repository to the one being analysed
+          #  for security compliance
+          repository: ${{ github.repository }}
+
+          # The owner/repo of where the policy is stored
+          # This generally is primarily used for a single repository that defines
+          #  your organizations security policy
+          policy: anshumaan-10/DevSecOps-Github-Actions
+          policy-path: policy/advance.yml
+          policy-branch: main
+          token: ${{ secrets.PAT_TOKEN }}
+          action: ${{ needs.validate_branch.outputs.op_pac_action }}
+
+          # [optional] Additional arguments
+          argvs: --display
+          ref: ${{ github.ref }}
       
 
       - name: Push Docker image to GAR
