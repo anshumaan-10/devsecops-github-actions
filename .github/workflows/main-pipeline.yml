@@ -87,7 +87,25 @@ jobs:
     # References a reusable workflow to build and tag the Docker image
     uses: ./.github/workflows/docker.yml
     secrets: inherit
+  binary-attestation:
+    needs: build  # Depends on successful build job completion
+    name: Binary Attestation Workflow
+    permissions:
+      contents: read
+      id-token: write
+      checks: write
+      pull-requests: write
+      issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
+      packages: write
+    # References a reusable workflow to build and tag the Docker image
+    uses: ./.github/workflows/binary-attestation.yml
+    with:
+      app_imageurl: ${{needs.docker.outputs.app_imageurl}}
+    secrets: inherit
 
+    
   # # 6. Container Image Security Scan
   # container-image-scan:
   #   needs: docker  # Depends on successful Docker image build

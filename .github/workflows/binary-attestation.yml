@@ -1,0 +1,138 @@
+name: 'Image Signing'
+on:
+  workflow_call:
+    inputs:
+      app_imageurl:
+        description: The url with tag for your docker image
+        type: string
+        required: true
+        default: 'default_name:default_tag'
+
+env:
+  REGISTRY: ghcr.io
+  DEPLOY_IMAGE: ${{inputs.app_imageurl}}
+  workflow_name: 'gcp-invalid'
+  GAR_PROJECT: 'avian-voice-433417-d5' # Google Project ID where GAR is provisioned.
+  GAR_NAME: 'asia-south1-docker.pkg.dev'
+  GAR_REPO_NAME: 'asia-south1-docker-images-multiregion-prod' # Name of the Google Artifactory Repository.
+  # The GCP Project where you will store your Binary Authorization attestations and policies
+  ATTESTOR_PROJECT_ID: 'avian-voice-433417-d5' #Google Project ID where KMS Keys for Attestation stored 
+  # Set the note id for Container Analysis API
+  BUILD_ATTESTOR_NOTE_ID: 'attestor-anshu-prod-build-note-0'
+  # The name of the build attestor to set the attestor for the BinAuthZ API
+  BUILD_ATTESTOR_NAME: 'attestor-anshu-prod-build'
+  # The email of the build attestor
+  BUILD_ATTESTOR_EMAIL: 'anshumaansingh10jan@gmail.com'
+  # The id of the build attestor
+  BUILD_ATTESTOR_ID: 'attestor-anshu-prod-build'
+  # KMS Details
+  KEY_PROJECT_ID: 'avian-voice-433417-d5'
+  KEY_LOCATION: 'asia-south1'
+  KEYRING: 'keyring-anshu-build-attestor'
+  BUILD_KEY_NAME: 'key-anshu-build-attestor'
+  BUILD_KEY_VERSION: '1'
+
+jobs:
+    validate_branch:
+      runs-on: ubuntu-latest
+      steps:
+       - name: Check Branch
+         run: |
+           echo "You are using a  ${{ github.ref_name }} ${{ github.head_ref }}branch with ${{github.event_name}} as action"
+           if [ "${{ github.ref_name }}" == 'release' ] || [ "${{ github.base_ref }}" == 'release'  ]; then
+             echo "The branch follows 'gcp-release' workflows."
+             echo "You are Signining docker image build on ${{ github.ref_name }} branch"
+             echo "workflow_name=nonprod" >> $GITHUB_ENV
+             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
+             exit 0
+           elif [ "${{ github.ref_name }}" == 'main' ] || [ "${{ github.base_ref }}" == 'main' ] ; then
+             echo "The branch follows 'prod' workflows."
+             echo "You are Signining docker image build on ${{ github.ref_name }} branch"
+             echo "workflow_name=prod" >> $GITHUB_ENV
+             echo "REGISTRY=${{env.GAR_NAME}}/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}" >> $GITHUB_ENV
+             echo "DEPLOY_IMAGE is ${{env.DEPLOY_IMAGE}}"
+           else
+           echo "The branch is invalid. Use 'gcp-release' or 'z5-main' as your branch."
+           echo "Signing of docker image will not be performed on '${{ github.ref_name }} ${{ github.base_ref }}' branch... Hence Exiting the Signing workflow..."
+           env.workflow_name='Invalid'
+           exit 0
+           fi
+
+      outputs:
+           op_workflow_name: ${{ env.workflow_name }}
+           op_registry: ${{ env.REGISTRY }}
+    attestation:
+        name: Sign and Create attestation
+        needs: validate_branch
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write
+        if: needs.validate_branch.outputs.op_workflow_name == 'prod' 
+        steps:
+            - uses: actions/checkout@v4
+            - name: Authenticating to gcloud
+              if: needs.validate_branch.outputs.op_workflow_name == 'prod'
+              id: auth-gcloud
+              uses: google-github-actions/auth@v2
+              with:
+                credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+       
+            - name: 'Set up Cloud SDK'     
+              uses: 'google-github-actions/setup-gcloud@v2'
+              with:
+                version: '460.0.0'
+                          
+            - name: Create Kritis attestation and signing
+              if: needs.validate_branch.outputs.op_workflow_name == 'prod'
+              run: |
+                
+                echo  "ATTESTOR_PROJECT_ID-->${{env.ATTESTOR_PROJECT_ID}}"
+                gcloud projects describe "${{env.ATTESTOR_PROJECT_ID}}"
+                export ATTESTOR_PROJECT_NUMBER=$(gcloud projects describe "${{env.ATTESTOR_PROJECT_ID}}" --format="value(projectNumber)")
+                # BinAuthZ Service Acccount Email
+                export ATTESTOR_SERVICE_ACCOUNT="service-${ATTESTOR_PROJECT_NUMBER}@gcp-sa-binaryauthorization.iam.gserviceaccount.com"
+                echo "Attestor serviceaccount-->$ATTESTOR_SERVICE_ACCOUNT"
+  
+                
+                # Set the GAR path you will use to host the container image
+                export CONTAINER_PATH=asia-south1-docker.pkg.dev/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}/${{ github.event.repository.name }}
+
+                # Get digest from container we created
+                DIGEST=$(gcloud container images describe ${{env.DEPLOY_IMAGE}} \
+                --format='get(image_summary.digest)')
+                export ARTIFACT_URL="$(gcloud container images describe ${{env.DEPLOY_IMAGE}} --format='value(image_summary.fully_qualified_digest)')"
+
+              
+                echo " DEPLOY_IMAGE is ${{env.DEPLOY_IMAGE}}"
+                echo "ARTIFACT_URL: $ARTIFACT_URL and Cmnd url: ${CONTAINER_PATH}@${DIGEST}"
+                green='\033[0;32m'
+                echo -e "{$green}Ready to sign the Image--> ${{env.DEPLOY_IMAGE}}"
+                #gcloud components update --version=460.0.0
+                gcloud components install beta --quiet
+                # create a temporary payload json that will be used to create our signed attestation
+                gcloud beta container binauthz create-signature-payload --artifact-url=${ARTIFACT_URL} > /tmp/generated_payload.json
+
+                # Sign and create attestation for container
+                gcloud beta container binauthz attestations sign-and-create  \
+                --artifact-url="${CONTAINER_PATH}@${DIGEST}" \
+                --attestor="projects/${{env.ATTESTOR_PROJECT_ID}}/attestors/${{env.BUILD_ATTESTOR_ID}}" \
+                --attestor-project="${{env.ATTESTOR_PROJECT_ID}}" \
+                --keyversion-project="${{env.KEY_PROJECT_ID}}" \
+                --keyversion-location="${{env.KEY_LOCATION}}" \
+                --keyversion-keyring="${{env.KEYRING}}" \
+                --keyversion-key="${{env.BUILD_KEY_NAME}}" \
+                --keyversion="${{env.BUILD_KEY_VERSION}}" \
+                --validate
+
+                echo "Waiting for container to be signed..."
+                green='\033[0;32m'
+                echo -e "{$green}Listing the attestations on Container Image to verify..."
+                sleep 5
+                gcloud beta container binauthz attestations list \
+                --attestor="projects/${{env.ATTESTOR_PROJECT_ID}}/attestors/${{env.BUILD_ATTESTOR_ID}}" \
+                --artifact-url="${CONTAINER_PATH}@${DIGEST}"
+               
+                echo "Attestation created by Attestor: ${BUILD_ATTESTOR_ID} for Image: ${ARTIFACT_URL}"
+
+                
