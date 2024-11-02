@@ -13,14 +13,9 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v3
 
-      - name: Run Stryker Mutation Tests
-        uses: stryker-mutator/github-action@v0.0.1
+      - name: Mutation Annotation Report
+        uses: johanholmerin/mutation-report-action@0.2.0
+        if: ${{ always() }} # Upload even if tests don't pass testing threshold
         with:
-          testProject: "BusinessLogic.Test/" # required
-          breakAt: "75" # Optional
-
-      - name: Upload Mutation Test Report
-        uses: actions/upload-artifact@v3
-        with:
-          name: html-report
-          path: ${{ github.workspace }}/BusinessLogic.Test/StrykerOutput/**/*.html
+          repo-token: '${{ secrets.PAT_TOKEN }}'
+          report-json: './reports/mutation/mutation.json' # Optional, default
