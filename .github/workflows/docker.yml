@@ -1,12 +1,12 @@
 name: Build and Push Docker Image to GHCR or GAR
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Docker image tag (optional)'
-        required: false
-        default: 'latest'  # Default value for the tag if not provided
+  # workflow_dispatch:
+  #   inputs:
+  #     tag:
+  #       description: 'Docker image tag (optional)'
+  #       required: false
+  #       default: 'latest'  # Default value for the tag if not provided
   workflow_call:
     outputs:
       image-tag:
@@ -44,6 +44,7 @@ jobs:
             echo "workflow_name=nonprod" >> $GITHUB_ENV
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
             echo "PAC_ACTION=continue" >> $GITHUB_ENV
+            echo "IMAGE_ID=ghcr.io/${GITHUB_REPOSITORY}" >> $GITHUB_ENV
           
           # Check for production branch
           elif [[ "${GITHUB_REF_NAME}" == 'main' || "${GITHUB_BASE_REF}" == 'main' || 
@@ -61,8 +62,7 @@ jobs:
             
             # Set IMAGE_ID
             echo "IMAGE_ID=${{ secrets.GAR_NAME }}/${{ secrets.GOOGLE_CLOUD_PROJECT }}/${{ secrets.GAR_REPO_NAME }}/${{ github.event.repository.name }}" >> $GITHUB_ENV
-            echo "Image ID is ${IMAGE_ID}"
-
+          
           # Handle invalid branches
           else
             echo "The branch is invalid. Use 'release' or 'main' as your branch."
@@ -73,6 +73,7 @@ jobs:
         op_workflow_name: ${{ env.workflow_name }}
         op_registry: ${{ env.REGISTRY }}
         op_pac_action: ${{ env.PAC_ACTION }}
+
 
   build-docker-image:
     outputs:
