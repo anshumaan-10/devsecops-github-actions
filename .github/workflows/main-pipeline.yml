@@ -41,6 +41,19 @@ jobs:
     uses: ./.github/workflows/sca.yml
     secrets: inherit
 
+  secret:
+    needs: build  # Depends on successful build job completion
+    name: Secret Scanning
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+      issues: read
+      actions: read  # Allow actions read permission
+      security-events: write  # Allow security events write permission
+    # References a reusable workflow for SCA to check for vulnerable dependencies
+    uses: ./.github/workflows/secret.yml
+    secrets: inherit
   # 3. Static Application Security Testing (SAST)
   sast:
     needs: build  # Depends on successful build job completion
@@ -88,7 +101,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     secrets: inherit
   binary-attestation:
-    needs: docker  # Depends on successful build job completion
+    needs:   # Depends on successful build job completion
     name: Binary Attestation Workflow
     permissions:
       contents: read
