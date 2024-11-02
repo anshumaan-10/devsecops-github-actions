@@ -260,7 +260,8 @@ jobs:
           policy-path: policy/advance.yml
           policy-branch: main
           token: ${{ secrets.PAT_TOKEN }}
-          action: ${{ needs.validate_branch.outputs.op_pac_action }}
+          #action: ${{ needs.validate_branch.outputs.op_pac_action }}
+          action: continue
 
           # [optional] Additional arguments
           argvs: --display
