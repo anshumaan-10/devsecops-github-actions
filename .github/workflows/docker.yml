@@ -69,10 +69,20 @@ jobs:
             echo "workflow_name=Invalid" >> $GITHUB_ENV
             exit 1
           fi
-      outputs:
-        op_workflow_name: ${{ steps.branch_check.outputs.workflow_name }}
-        op_registry: ${{ steps.branch_check.outputs.REGISTRY }}
-        op_pac_action: ${{ steps.branch_check.outputs.PAC_ACTION }}
+
+      # Set outputs explicitly for further jobs to access
+      - name: Set Outputs
+        run: |
+          echo "::set-output name=op_workflow_name::${{ env.workflow_name }}"
+          echo "::set-output name=op_registry::${{ env.REGISTRY }}"
+          echo "::set-output name=op_pac_action::${{ env.PAC_ACTION }}"
+        id: set_outputs
+
+  # Outputs to be available to other jobs
+  outputs:
+    op_workflow_name: ${{ steps.set_outputs.outputs.op_workflow_name }}
+    op_registry: ${{ steps.set_outputs.outputs.op_registry }}
+    op_pac_action: ${{ steps.set_outputs.outputs.op_pac_action }}
 
 
 
