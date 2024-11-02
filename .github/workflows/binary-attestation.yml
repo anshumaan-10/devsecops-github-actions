@@ -95,7 +95,6 @@ jobs:
                 export ATTESTOR_SERVICE_ACCOUNT="service-${ATTESTOR_PROJECT_NUMBER}@gcp-sa-binaryauthorization.iam.gserviceaccount.com"
                 echo "Attestor serviceaccount-->$ATTESTOR_SERVICE_ACCOUNT"
   
-                echo "Repository Name: ${github.event.repository.name}"
                 # Set the GAR path you will use to host the container image
                 export CONTAINER_PATH=asia-south1-docker.pkg.dev/${{env.GAR_PROJECT}}/${{env.GAR_REPO_NAME}}/${{ github.event.repository.name }}
 
