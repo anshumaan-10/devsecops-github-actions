@@ -233,7 +233,8 @@ jobs:
           docker images
           docker push ${{ env.IMAGE_ID }}:${{ env.tag }}
       
-      - id: 'auth'
+      - name: Authenticate to GCP
+        id: 'auth'
         uses: 'google-github-actions/auth@v2'
         with:
           credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
