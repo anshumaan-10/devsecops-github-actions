@@ -70,9 +70,10 @@ jobs:
             exit 1
           fi
       outputs:
-        op_workflow_name: ${{ env.workflow_name }}
-        op_registry: ${{ env.REGISTRY }}
-        op_pac_action: ${{ env.PAC_ACTION }}
+        op_workflow_name: ${{ steps.branch_check.outputs.workflow_name }}
+        op_registry: ${{ steps.branch_check.outputs.REGISTRY }}
+        op_pac_action: ${{ steps.branch_check.outputs.PAC_ACTION }}
+
 
 
   build-docker-image:
