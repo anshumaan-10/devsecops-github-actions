@@ -11,7 +11,7 @@ on:
 
 jobs:
   # 1. Build Job
-  build:
+  Build and Unit Test:
     name: Build Application
     # Required permissions to use checks and pull requests in the nested job
     permissions:
@@ -27,7 +27,7 @@ jobs:
     secrets: inherit  # https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_idsecretsinherit
 
   # 2. Software Composition Analysis (SCA)
-  sca:
+  Software Composition Analysis(SCA):
     needs: build  # Depends on successful build job completion
     name: Software Composition Analysis (SCA)
     permissions:
@@ -42,7 +42,7 @@ jobs:
     secrets: inherit
 
   # 3. Static Application Security Testing (SAST)
-  sast:
+  Static Application Security Testing (SAST):
     needs: build  # Depends on successful build job completion
     permissions:
       contents: read
@@ -57,7 +57,7 @@ jobs:
     secrets: inherit
 
   # 4. License Compliance Check
-  license-compliance:
+  License-Compliance-Check:
     needs: build  # Depends on successful build job completion
     name: License Compliance Check
     permissions:
@@ -72,7 +72,7 @@ jobs:
     secrets: inherit
 
   # 5. Docker Image Build
-  docker:
+  Docker-Build-Image-Scan:
     needs: build  # Depends on successful build job completion
     name: Build Docker Image
     permissions:
@@ -88,29 +88,29 @@ jobs:
     uses: ./.github/workflows/docker.yml
     secrets: inherit
 
-  # 6. Container Image Security Scan
-  container-image-scan:
-    needs: docker  # Depends on successful Docker image build
-    permissions:
-      contents: read
-      checks: write
-      id-token: write
-      pull-requests: write
-      issues: read
-      actions: read  # Allow actions read permission
-      security-events: write  # Allow security events write permission
-      packages: write
-    name: Container Image Security Scan
-    # References a reusable workflow to scan the Docker image for vulnerabilities
-    uses: ./.github/workflows/container-image-scan.yml
-    secrets: inherit
-    # Passes the Docker image tag from the previous job to use for scanning
-    with:
-      image-tag: ${{ needs.docker.outputs.image-tag }}
+  # # 6. Container Image Security Scan
+  # container-image-scan:
+  #   needs: docker  # Depends on successful Docker image build
+  #   permissions:
+  #     contents: read
+  #     checks: write
+  #     id-token: write
+  #     pull-requests: write
+  #     issues: read
+  #     actions: read  # Allow actions read permission
+  #     security-events: write  # Allow security events write permission
+  #     packages: write
+  #   name: Container Image Security Scan
+  #   # References a reusable workflow to scan the Docker image for vulnerabilities
+  #   uses: ./.github/workflows/container-image-scan.yml
+  #   secrets: inherit
+  #   # Passes the Docker image tag from the previous job to use for scanning
+  #   with:
+  #     image-tag: ${{ needs.docker.outputs.image-tag }}
 
   # 7. Dynamic Application Security Testing (DAST)
   dast:
-    needs: [build, docker]  # Depends on both build and Docker image build jobs
+    needs: [Build and Unit Test, Docker-Build-Image-Scan]  # Depends on both build and Docker image build jobs
     name: Dynamic Application Security Testing (DAST)
     permissions:
       contents: read
