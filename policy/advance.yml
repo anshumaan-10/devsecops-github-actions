@@ -1,0 +1,21 @@
+#https://github.com/advanced-security/policy-as-code
+
+#When a level is selected like for example error, all higher level severities (critical and high in this example) will also be added.
+#Below are the levels which can be assigned PaC 
+# - critical
+# - high
+# - error
+# - medium
+# - moderate
+# - low
+# - warning
+# - notes
+
+codescanning:
+  level: critical
+
+dependabot:
+  level: critical
+
+secretscanning:
+  level: all
