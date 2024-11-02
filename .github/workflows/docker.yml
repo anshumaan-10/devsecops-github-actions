@@ -11,8 +11,7 @@ on:
     outputs:
       app_imageurl:
         description: 'The image tag of the new Docker image'
-        value: ${{ jobs.docker.outputs.op_image_url} }}
-
+        value: ${{ jobs.build-docker-image.outputs.op_image_url }}
 
 env:
   REGISTRY: ghcr.io
