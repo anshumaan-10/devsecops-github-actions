@@ -54,6 +54,11 @@ jobs:
         terraform plan --var-file=<(cat *.tfvars) -out test.tfplan
         terraform show -json ./test.tfplan > ./tfplan.json
 
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
     - name: Analyze Terraform Code Security (SCC)
       uses: google-github-actions/analyze-code-security-scc@v0
       with:
