@@ -3,12 +3,12 @@ name: 'Deploy Infrastructure'
 on:
   push:
     branches:
-      - main
+      - main 
       - dependency-test
   workflow_dispatch: 
 
 jobs:
-  terraform:
+  terraform: 
     runs-on: ubuntu-latest
 
     steps:
