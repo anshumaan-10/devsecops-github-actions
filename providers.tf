@@ -9,7 +9,7 @@ terraform {
 
 provider "google" {
   # Configuration options
-  project = "my-terraform-project-426311"
+  project = "avian-voice-433417-d5"
   region = "us-central1"
   zone = "us-central1-a"
   credentials = "keys.json"
