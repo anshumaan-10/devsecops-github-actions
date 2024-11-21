@@ -1,0 +1,81 @@
+name: 'Deploy Infrastructure'
+
+on:
+  push:
+    branches:
+      - main 
+      - dependency-test
+  workflow_dispatch: 
+
+jobs:
+  terraform-iac-scan: 
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Get changed files
+      uses: jitterbit/get-changed-files@v1
+      continue-on-error: true
+      id: get_changed
+      with:
+        format: csv
+        token: ${{ secrets.GITHUB_TOKEN }}
+        ignore: "**/+(.github)"
+        foldersOnly: true
+
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        version: '460.0.0'
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+    - name: Set up Terraform
+      uses: hashicorp/setup-terraform@v2
+
+    - name: Terraform Init
+      run: |
+        echo "Running terraform init"
+        terraform init 
+
+    - name: Terraform Validate
+      run: |
+        echo "Running terraform validate"
+        terraform validate 
+
+    - name: Terraform Plan
+      run: |
+        echo "Running terraform plan"
+        terraform plan --var-file=<(cat *.tfvars) -out test.tfplan
+        terraform show -json ./test.tfplan > ./tfplan.json
+
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+    - name: Analyze Terraform Code Security (SCC)
+      uses: google-github-actions/analyze-code-security-scc@v0
+      with:
+        organization_id: '645315547569'
+        scan_file_ref: './tfplan.json'  # Ensure this points to the correct path
+        iac_type: 'terraform'
+        scan_timeout: '1m'
+        ignore_violations: false
+        failure_criteria: 'High:1,Medium:1,Low:1,Operator:or'
+        fail_silently: false
+
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
+
+    - name: Upload SARIF Results (if any)
+      if: ${{ !cancelled() && steps.analyze-code-security-scc.outputs.iac_scan_result_sarif_path != '' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: 'sarif'
+        path: '${{ steps.analyze-code-security-scc.outputs.iac_scan_result_sarif_path }}'
