@@ -1,0 +1,43 @@
+name: "IAC Security test"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  iac_security_test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticating to gcloud
+  
+        id: auth-gcloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
+
+      - name: 'Set up Cloud SDK'     
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          version: '460.0.0'
+
+      - id: 'analyze-code-security-scc'
+        uses: google-github-actions/analyze-code-security-scc@v0
+        with:
+          organization_id: '123456789'
+          scan_file_ref: './tf_plan.json'
+          iac_type: 'terraform'
+          scan_timeout: '1m'
+          ignore_violations: false
+          failure_criteria: 'High:1,Medium:1,Low:1,Operator:or'
+          fail_silently: false
+
+      - if: ${{ !cancelled() && steps.analyze-code-security-scc.outputs.iac_scan_result_sarif_path != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: 'sarif'
+          path: '${{ steps.analyze-code-security-scc.outputs.iac_scan_result_sarif_path }}'
