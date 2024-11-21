@@ -3,7 +3,7 @@ provider "google" {
   region      = "us-central1"
   zone        = "asia-southeast1-a"
 }
-
+ 
 resource "google_compute_disk" "disk-1" {
   name   = "disk-1"
   size   = 15
