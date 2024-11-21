@@ -1,10 +1,3 @@
-provider "google" {
-  project     = "avian-voice-433417-d5"
-  region      = "us-central1"
-  zone        = "asia-southeast1-a"  # Use the same zone here
-  credentials = "keys.json"  # Pass this securely in GitHub Actions
-}
-
 resource "google_compute_instance" "vm-from-tf" {
   name           = "vm-from-tf"
   zone           = "asia-southeast1-a"
@@ -48,21 +41,5 @@ resource "google_compute_instance" "vm-from-tf" {
   attached_disk {
     source      = google_compute_disk.disk-1.id
     device_name = "disk-1"
-  }
-}
-
-resource "google_compute_disk" "disk-1" {
-  name   = "disk-1"
-  size   = 15
-  zone   = "asia-southeast1-a"
-  type   = "pd-ssd"
-}
-
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "3.85.0"
-    }
   }
 }
