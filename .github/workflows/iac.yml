@@ -41,12 +41,12 @@ jobs:
     - name: Terraform Init
       run: |
         echo "Running terraform init"
-        terraform init > tf_init.txt
+        terraform init 
 
     - name: Terraform Validate
       run: |
         echo "Running terraform validate"
-        terraform validate > tf_validate.txt
+        terraform validate 
 
     - name: Terraform Plan
       run: |
