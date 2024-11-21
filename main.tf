@@ -1,14 +1,8 @@
-provider "google" {
-  project     = "avian-voice-433417-d5"
-  region      = "us-central1"
-  zone        = "asia-southeast1-a"
-}
- 
 resource "google_compute_disk" "disk-1" {
-  name   = "disk-1"
-  size   = 15
-  zone   = "asia-southeast1-a"
-  type   = "pd-ssd"
+  name = "disk-1"
+  size = 15
+  zone = "asia-southeast1-a"
+  type = "pd-ssd"
 }
 
 resource "google_compute_instance" "vm-from-tf" {
@@ -24,14 +18,14 @@ resource "google_compute_instance" "vm-from-tf" {
 
   boot_disk {
     initialize_params {
-      image = "debian-11-bullseye-v20230928"  # Use a more recent Debian image
+      image = "debian-11-bullseye-v20230928"
       size  = 35
     }
     auto_delete = false
   }
 
   labels = {
-    "env" = "tflearning"
+    env = "tflearning"
   }
 
   scheduling {
@@ -40,7 +34,7 @@ resource "google_compute_instance" "vm-from-tf" {
   }
 
   service_account {
-    email  = "default"  # Use default or dynamically assigned service account
+    email  = "default"
     scopes = ["cloud-platform"]
   }
 
@@ -54,14 +48,5 @@ resource "google_compute_instance" "vm-from-tf" {
   attached_disk {
     source      = google_compute_disk.disk-1.id
     device_name = "disk-1"
-  }
-}
-
-terraform {
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "3.85.0"
-    }
   }
 }
